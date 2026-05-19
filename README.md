@@ -255,9 +255,9 @@ npm run logs:export
 
 ## 📞 联系方式
 
-- 📧 Email: support@envguard.dev
-- 🐛 Issue: [GitHub Issues](https://github.com/envguard/envguard/issues)
-- 💬 讨论: [GitHub Discussions](https://github.com/envguard/envguard/discussions)
+- 📧 Email: support@fastenv.com
+- 🐛 Issue: [GitHub Issues](https://github.com/fastenv/fastenv/issues)
+- 💬 讨论: [GitHub Discussions](https://github.com/fastenv/fastenv/discussions)
 
 ## 🙏 致谢
 
@@ -265,4 +265,4 @@ npm run logs:export
 
 ---
 
-**Made with ❤️ by EnvGuard Team**
+**Made with ❤️ by FastEnv Team**
