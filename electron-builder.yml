@@ -1,0 +1,60 @@
+appId: com.envguard.app
+productName: EnvGuard
+version: 0.1.0
+directories:
+  buildResources: assets
+  output: release
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - package.json
+  - service/**/*
+extraMetadata:
+  name: env-guard
+
+win:
+  target:
+    - nsis
+    - portable
+  certificateFile: null
+  certificatePassword: null
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: EnvGuard
+
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 438
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - deb
+    - AppImage
+  category: Development
+
+deb:
+  depends:
+    - gconf2
+    - gconf-service
+    - libnotify4
+    - libappindicator1
+    - libxss1
+    - libxtst6
