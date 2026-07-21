@@ -76,7 +76,7 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - 冲突修复仍需要继续强化平台级备份、权限提示和可验证回滚。
 - 日志查看器、日志导出、配置导入导出尚未完成完整 IPC 链路。
 - 仍需补充正式的自动化测试框架和 CI 测试；当前已提供本地可重复的隔离安装、需求解析和冲突检测验收脚本。
-- Electron 安装器打包和跨平台发布验收仍未完成。
+- Windows x64 Electron 安装器与便携版已发布到 v0.1.0 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
 - 依赖安装成功后，详情页首次可能仍显示缓存的依赖清单；执行“重新统计依赖”后可显示最新包信息。自动刷新链路仍应继续强化。
 
 ### 推荐开发顺序
@@ -220,6 +220,15 @@ pnpm run pack
 # 生成发布包并执行 electron-builder
 pnpm run dist
 ```
+
+## 📦 下载并安装已发布版本
+
+Windows x64 用户可以直接从 [EnvGuard v0.1.0 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.0) 下载：
+
+- `EnvGuard.Setup.0.1.0.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
+- `EnvGuard.0.1.0.exe`：便携版，无需安装，直接运行即可。
+
+当前安装包未配置代码签名证书，Windows 首次运行时可能显示 SmartScreen 或未知发布者提示；请确认文件来自上述 GitHub Release 后再继续。当前 Release 已包含 NSIS 安装器、便携版、blockmap 和 `latest.yml` 资产。
 
 ## 📖 使用指南
 
