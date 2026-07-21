@@ -4,6 +4,7 @@
  */
 
 import * as path from 'path';
+import { logger } from '../logger/logger';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import { ConflictIssue } from './conflict-detector';
@@ -28,20 +29,16 @@ export interface FixResult {
   failed: string[];
   backupPath?: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export class ConflictFixer {
-  private log(level: string, message: string): void {
-    console.log(`[${level}] [ConflictFixer] ${message}`);
-  }
-
   private info(message: string): void {
-    this.log('INFO', message);
+    logger.info('ConflictFixer', message);
   }
 
   private error(message: string): void {
-    this.log('ERROR', message);
+    logger.error('ConflictFixer', message);
   }
 
   /**
@@ -195,8 +192,8 @@ export class ConflictFixer {
       // 尝试升级 pip 和依赖
       const pipPath = this.getPythonPipPath();
       if (pipPath) {
-        execSync(`"${pipPath}" install --upgrade pip`, { stdio: 'inherit' } as any);
-        execSync(`"${pipPath}" install --upgrade setuptools wheel`, { stdio: 'inherit' } as any);
+        execSync(`"${pipPath}" install --upgrade pip`, { stdio: 'inherit' });
+        execSync(`"${pipPath}" install --upgrade setuptools wheel`, { stdio: 'inherit' });
         this.info(`已升级 pip 和基础工具`);
       }
     } catch (err) {

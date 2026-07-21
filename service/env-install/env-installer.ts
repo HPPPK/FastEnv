@@ -3,9 +3,10 @@
  * 负责在指定虚拟环境中安装、升级、卸载依赖包
  */
 
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { logger } from '../logger/logger';
 
 export interface InstallOptions {
   environmentPath: string;
@@ -34,22 +35,17 @@ export interface InstallResult {
   installed: string[];
   failed: string[];
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export class EnvironmentInstaller {
-  private log(level: string, message: string): void {
-    console.log(`[${level}] [EnvironmentInstaller] ${message}`);
-  }
-
   private info(message: string): void {
-    this.log('INFO', message);
+    logger.info('EnvironmentInstaller', message);
   }
 
   private error(message: string): void {
-    this.log('ERROR', message);
+    logger.error('EnvironmentInstaller', message);
   }
-
   /**
    * 安装依赖包
    */
@@ -72,7 +68,12 @@ export class EnvironmentInstaller {
             message: `正在安装 ${pkg}...`,
           });
 
-          await this.installSinglePackage(options.environmentPath, options.environmentType, pkg, options.mirrorSource);
+          await this.installSinglePackage(
+            options.environmentPath,
+            options.environmentType,
+            pkg,
+            options.mirrorSource
+          );
 
           installed.push(pkg);
           options.onProgress?.({
@@ -98,7 +99,9 @@ export class EnvironmentInstaller {
         success,
         installed,
         failed,
-        message: success ? '所有依赖安装成功' : `${installed.length} 个成功，${failed.length} 个失败`,
+        message: success
+          ? '所有依赖安装成功'
+          : `${installed.length} 个成功，${failed.length} 个失败`,
         details: {
           type: options.environmentType,
           path: options.environmentPath,
@@ -147,13 +150,17 @@ export class EnvironmentInstaller {
   /**
    * 安装 Python 包
    */
-  private async installPythonPackage(environmentPath: string, packageName: string, mirrorSource?: string): Promise<void> {
+  private async installPythonPackage(
+    environmentPath: string,
+    packageName: string,
+    mirrorSource?: string
+  ): Promise<void> {
     const pipPath = this.getPythonPipPath(environmentPath);
     const cmd = mirrorSource
       ? `"${pipPath}" install -i ${mirrorSource} ${packageName}`
       : `"${pipPath}" install ${packageName}`;
 
-    execSync(cmd, { stdio: 'inherit' } as any);
+    execSync(cmd, { stdio: 'inherit' });
   }
 
   /**
@@ -161,7 +168,10 @@ export class EnvironmentInstaller {
    */
   private async installNodePackage(environmentPath: string, packageName: string): Promise<void> {
     const npmPath = this.getNodeNpmPath(environmentPath);
-    execSync(`"${npmPath}" install ${packageName}`, { cwd: environmentPath, stdio: 'inherit' } as any);
+    execSync(`"${npmPath}" install ${packageName}`, {
+      cwd: environmentPath,
+      stdio: 'inherit',
+    });
   }
 
   /**
@@ -182,7 +192,7 @@ export class EnvironmentInstaller {
    * 安装 Go 包
    */
   private async installGoPackage(environmentPath: string, packageName: string): Promise<void> {
-    execSync(`go get ${packageName}`, { cwd: environmentPath, stdio: 'inherit' } as any);
+    execSync(`go get ${packageName}`, { cwd: environmentPath, stdio: 'inherit' });
   }
 
   /**
@@ -209,7 +219,9 @@ export class EnvironmentInstaller {
         success,
         installed: uninstalled,
         failed,
-        message: success ? '所有依赖卸载成功' : `${uninstalled.length} 个成功，${failed.length} 个失败`,
+        message: success
+          ? '所有依赖卸载成功'
+          : `${uninstalled.length} 个成功，${failed.length} 个失败`,
         details: {
           type: options.environmentType,
           path: options.environmentPath,
@@ -257,9 +269,12 @@ export class EnvironmentInstaller {
   /**
    * 卸载 Python 包
    */
-  private async uninstallPythonPackage(environmentPath: string, packageName: string): Promise<void> {
+  private async uninstallPythonPackage(
+    environmentPath: string,
+    packageName: string
+  ): Promise<void> {
     const pipPath = this.getPythonPipPath(environmentPath);
-    execSync(`"${pipPath}" uninstall -y ${packageName}`, { stdio: 'inherit' } as any);
+    execSync(`"${pipPath}" uninstall -y ${packageName}`, { stdio: 'inherit' });
   }
 
   /**
@@ -267,7 +282,10 @@ export class EnvironmentInstaller {
    */
   private async uninstallNodePackage(environmentPath: string, packageName: string): Promise<void> {
     const npmPath = this.getNodeNpmPath(environmentPath);
-    execSync(`"${npmPath}" uninstall ${packageName}`, { cwd: environmentPath, stdio: 'inherit' } as any);
+    execSync(`"${npmPath}" uninstall ${packageName}`, {
+      cwd: environmentPath,
+      stdio: 'inherit',
+    });
   }
 
   /**
@@ -314,8 +332,8 @@ export class EnvironmentInstaller {
   private async getPythonInstalledPackages(environmentPath: string): Promise<string[]> {
     const pipPath = this.getPythonPipPath(environmentPath);
     const output = execSync(`"${pipPath}" list --format=json`, { encoding: 'utf-8' });
-    const packages = JSON.parse(output);
-    return packages.map((pkg: any) => `${pkg.name}==${pkg.version}`);
+    const packages = JSON.parse(output) as Array<{ name: string; version: string }>;
+    return packages.map((pkg) => `${pkg.name}==${pkg.version}`);
   }
 
   /**
@@ -323,7 +341,10 @@ export class EnvironmentInstaller {
    */
   private async getNodeInstalledPackages(environmentPath: string): Promise<string[]> {
     const npmPath = this.getNodeNpmPath(environmentPath);
-    const output = execSync(`"${npmPath}" list --depth=0 --json`, { cwd: environmentPath, encoding: 'utf-8' });
+    const output = execSync(`"${npmPath}" list --depth=0 --json`, {
+      cwd: environmentPath,
+      encoding: 'utf-8',
+    });
     const data = JSON.parse(output);
     return Object.keys(data.dependencies || {});
   }
@@ -368,9 +389,33 @@ export class EnvironmentInstaller {
    */
   private getNodeNpmPath(environmentPath: string): string {
     const isWindows = process.platform === 'win32';
-    return isWindows
-      ? path.join(environmentPath, 'node_modules', '.bin', 'npm.cmd')
-      : path.join(environmentPath, 'node_modules', '.bin', 'npm');
+    const localCandidates = isWindows
+      ? [
+          path.join(environmentPath, 'node_modules', '.bin', 'npm.cmd'),
+          path.join(environmentPath, 'node_modules', '.bin', 'npm'),
+        ]
+      : [path.join(environmentPath, 'node_modules', '.bin', 'npm')];
+
+    const localNpm = localCandidates.find((candidate) => fs.existsSync(candidate));
+    if (localNpm) {
+      return localNpm;
+    }
+
+    // 普通 Node 项目通常没有自己的 npm 可执行文件，回退到系统 PATH。
+    const lookupCommand = isWindows ? 'where.exe npm.cmd' : 'command -v npm';
+    try {
+      const resolvedPath = execSync(lookupCommand, { encoding: 'utf-8' })
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find(Boolean);
+      if (resolvedPath) {
+        return resolvedPath;
+      }
+    } catch {
+      // Fall through to a descriptive error below.
+    }
+
+    throw new Error('npm executable not found in the project or system PATH');
   }
 }
 

@@ -13,7 +13,7 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ title, description, icon }: EmptyStateProps): JSX.Element {
-  const getIcon = () => {
+  const getIcon = (): JSX.Element => {
     switch (icon) {
       case 'Package':
         return <Package size={48} className="text-muted-foreground" />;

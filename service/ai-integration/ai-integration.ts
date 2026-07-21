@@ -260,7 +260,7 @@ export class AIIntegrationService {
       }
 
       // 模拟客户端解析（实际应用中需要通过 IPC 或其他方式与客户端通信）
-      const result = await this.simulateClientParsing(request, client);
+      const result = await this.simulateClientParsing(request);
 
       logger.info('AIIntegrationService', '桌面客户端解析完成', {
         confidence: result.confidence,
@@ -312,7 +312,7 @@ export class AIIntegrationService {
       }
 
       // 模拟浏览器解析
-      const result = await this.simulateClientParsing(request, browserClient);
+      const result = await this.simulateClientParsing(request);
 
       logger.info('AIIntegrationService', '浏览器模式解析完成', {
         confidence: result.confidence,
@@ -359,8 +359,7 @@ export class AIIntegrationService {
    * 模拟客户端解析（实际应用中需要真实的 AI 调用）
    */
   private async simulateClientParsing(
-    request: AIParseRequest,
-    client: AIClientInfo
+    request: AIParseRequest
   ): Promise<{
     success: boolean;
     analysis: DemandAnalysis;

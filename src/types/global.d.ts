@@ -5,9 +5,12 @@
 
 interface IpcRenderer {
   send(channel: string, data: unknown): void;
-  on(channel: string, listener: (event: any, data: any) => void): void;
-  once(channel: string, listener: (event: any, data: any) => void): void;
-  removeListener(channel: string, listener: (event: any, data: any) => void): void;
+  on(channel: string, listener: (event: Electron.IpcRendererEvent, data: unknown) => void): void;
+  once(channel: string, listener: (event: Electron.IpcRendererEvent, data: unknown) => void): void;
+  removeListener(
+    channel: string,
+    listener: (event: Electron.IpcRendererEvent, data: unknown) => void
+  ): void;
   removeAllListeners(channel: string): void;
 }
 

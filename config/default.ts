@@ -3,7 +3,7 @@
  * 应用启动时的默认配置值
  */
 
-import type { GlobalSystemConfig, UserConfig } from '../src/types/index';
+import type { ConflictType, GlobalSystemConfig, UserConfig } from '../src/types/index';
 import { DEFAULT_CONFIG, MIRROR_SOURCES, CONFLICT_RULES } from './constants';
 
 /**
@@ -37,7 +37,7 @@ export const defaultGlobalConfig: GlobalSystemConfig = {
   userConfig: defaultUserConfig,
   conflictRules: Object.values(CONFLICT_RULES).map((rule) => ({
     id: rule.id,
-    type: rule.id as any,
+    type: rule.id as ConflictType,
     pattern: '',
     severity: rule.severity,
     autoFixable: rule.autoFixable,

@@ -5,6 +5,7 @@ import type {
   RepairRecord,
   SystemScanResult,
   Dependency,
+  AppSettings,
 } from '../types';
 import { ipcClient } from '../utils/ipc-client';
 
@@ -16,9 +17,25 @@ export interface ConflictSummary {
   low: number;
 }
 
+export interface DependencyInstallProgress {
+  operationId: string;
+  package: string;
+  status: 'installing' | 'success' | 'failed';
+  progress: number;
+  message: string;
+  error?: string;
+}
+
 export interface CreateEnvironmentProgress {
   operationId: string;
-  stage: 'preparing' | 'creating' | 'installing' | 'verifying' | 'completed' | 'cancelled' | 'failed';
+  stage:
+    | 'preparing'
+    | 'creating'
+    | 'installing'
+    | 'verifying'
+    | 'completed'
+    | 'cancelled'
+    | 'failed';
   progress: number;
   message: string;
   currentPackage?: string;
@@ -86,16 +103,31 @@ export const envguardApi = {
     return response.records ?? [];
   },
 
+  async getConfig(): Promise<AppSettings> {
+    const response = await ipcClient.invoke<{ config: AppSettings }>('config:get');
+    return response.config;
+  },
+
+  async setConfig(config: AppSettings): Promise<{ success: boolean }> {
+    return ipcClient.invoke('config:set', config);
+  },
+
   async installDependency(
     environmentPath: string,
     environmentType: string,
-    packages: string[]
-  ): Promise<{ success: boolean; error?: string }> {
+    packages: string[],
+    operationId?: string
+  ): Promise<{ success: boolean; error?: string; message?: string; failed?: string[] }> {
     return ipcClient.invoke('env:install-packages', {
       environmentPath,
       environmentType,
       packages,
+      operationId,
     });
+  },
+
+  onDependencyInstallProgress(callback: (progress: DependencyInstallProgress) => void): () => void {
+    return ipcClient.on<DependencyInstallProgress>('dependency:install:progress', callback);
   },
 
   async deleteEnvironment(
@@ -124,10 +156,13 @@ export const envguardApi = {
     environmentPath: string,
     environmentType: string
   ): Promise<Dependency[]> {
-    const response = await ipcClient.invoke<{ dependencies: Dependency[] }>('env:get-installed-packages', {
-      environmentPath,
-      environmentType,
-    });
+    const response = await ipcClient.invoke<{ dependencies: Dependency[] }>(
+      'env:get-installed-packages',
+      {
+        environmentPath,
+        environmentType,
+      }
+    );
     return response.dependencies;
   },
 

@@ -3,7 +3,12 @@
  * 检测系统中的各类环境冲突
  */
 
-import type { EnvironmentConflict, ConflictType, Environment, SystemScanResult } from '../../src/types';
+import type {
+  EnvironmentConflict,
+  ConflictType,
+  Environment,
+  SystemScanResult,
+} from '../../src/types';
 
 /**
  * 冲突检测器类
@@ -63,9 +68,7 @@ export class ConflictDetector {
 
     // 检测重复路径
     const pathStrings = pathEntries.map((p) => p.path);
-    const duplicates = pathStrings.filter(
-      (p, i) => pathStrings.indexOf(p) !== i
-    );
+    const duplicates = pathStrings.filter((p, i) => pathStrings.indexOf(p) !== i);
     if (duplicates.length > 0) {
       conflicts.push({
         id: `conflict-dup-path-${Date.now()}`,
@@ -198,7 +201,7 @@ export class ConflictDetector {
   private detectPermissionIssues(environments: Environment[]): EnvironmentConflict[] {
     const conflicts: EnvironmentConflict[] = [];
 
-    environments.forEach((env) => {
+    environments.forEach(() => {
       // 这里可以添加实际的权限检测逻辑
       // 例如检查环境路径是否可读写
     });

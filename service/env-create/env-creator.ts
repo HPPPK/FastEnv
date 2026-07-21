@@ -4,6 +4,7 @@
  */
 
 import { execSync } from 'child_process';
+import { logger } from '../logger/logger';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -21,20 +22,16 @@ export interface CreateEnvironmentResult {
   environmentId: string;
   environmentPath: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export class EnvironmentCreator {
-  private log(level: string, message: string): void {
-    console.log(`[${level}] [EnvironmentCreator] ${message}`);
-  }
-
   private info(message: string): void {
-    this.log('INFO', message);
+    logger.info('EnvironmentCreator', message);
   }
 
   private error(message: string): void {
-    this.log('ERROR', message);
+    logger.error('EnvironmentCreator', message);
   }
 
   /**
@@ -85,7 +82,12 @@ export class EnvironmentCreator {
         this.info(`环境创建成功: ${options.name}`);
         // 安装初始依赖
         if (options.dependencies && options.dependencies.length > 0) {
-          await this.installDependencies(options.type, environmentPath, options.dependencies, options.mirrorSource);
+          await this.installDependencies(
+            options.type,
+            environmentPath,
+            options.dependencies,
+            options.mirrorSource
+          );
         }
       }
 
@@ -110,13 +112,13 @@ export class EnvironmentCreator {
   ): Promise<CreateEnvironmentResult> {
     try {
       const version = options.version || '3.11';
-      
+
       // 创建 venv 虚拟环境
-      execSync(`python${version} -m venv "${environmentPath}"`, { stdio: 'inherit' } as any);
+      execSync(`python${version} -m venv "${environmentPath}"`, { stdio: 'inherit' });
 
       // 升级 pip
       const pipPath = this.getPythonPipPath(environmentPath);
-      execSync(`"${pipPath}" install --upgrade pip`, { stdio: 'inherit' } as any);
+      execSync(`"${pipPath}" install --upgrade pip`, { stdio: 'inherit' });
 
       return {
         success: true,
@@ -167,7 +169,10 @@ export class EnvironmentCreator {
         license: 'ISC',
       };
 
-      fs.writeFileSync(path.join(environmentPath, 'package.json'), JSON.stringify(packageJson, null, 2));
+      fs.writeFileSync(
+        path.join(environmentPath, 'package.json'),
+        JSON.stringify(packageJson, null, 2)
+      );
 
       // 创建 .npmrc 配置文件（配置镜像源）
       if (options.mirrorSource) {
@@ -311,22 +316,27 @@ export class EnvironmentCreator {
       this.info(`开始安装依赖: ${dependencies.join(', ')}`);
 
       switch (type) {
-        case 'python':
+        case 'python': {
           const pipPath = this.getPythonPipPath(environmentPath);
           for (const dep of dependencies) {
             const cmd = mirrorSource
               ? `"${pipPath}" install -i ${mirrorSource} ${dep}`
               : `"${pipPath}" install ${dep}`;
-            execSync(cmd, { stdio: 'inherit' } as any);
+            execSync(cmd, { stdio: 'inherit' });
           }
           break;
+        }
 
-        case 'node':
+        case 'node': {
           const npmPath = this.getNodeNpmPath(environmentPath);
           for (const dep of dependencies) {
-            execSync(`"${npmPath}" install ${dep}`, { cwd: environmentPath, stdio: 'inherit' } as any);
+            execSync(`"${npmPath}" install ${dep}`, {
+              cwd: environmentPath,
+              stdio: 'inherit',
+            });
           }
           break;
+        }
 
         case 'java':
           // Java 依赖通过 Maven 管理，这里只记录日志
@@ -336,7 +346,7 @@ export class EnvironmentCreator {
         case 'go':
           // Go 依赖通过 go get 管理
           for (const dep of dependencies) {
-            execSync(`go get ${dep}`, { cwd: environmentPath, stdio: 'inherit' } as any);
+            execSync(`go get ${dep}`, { cwd: environmentPath, stdio: 'inherit' });
           }
           break;
       }

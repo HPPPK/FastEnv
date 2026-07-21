@@ -11,11 +11,12 @@ import { mergeEnvironments } from '../../utils/env-merge';
 import { Search, RefreshCw, Zap, Settings, Moon, Sun } from 'lucide-react';
 
 export default function TopBar(): JSX.Element {
-  const { searchQuery, setSearchQuery, theme, setTheme, setCurrentPage, addNotification } = useUIStore();
+  const { searchQuery, setSearchQuery, theme, setTheme, setCurrentPage, addNotification } =
+    useUIStore();
   const { setEnvironments, setLastScanTime, setError } = useEnvStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
     setError(null);
 
@@ -43,7 +44,7 @@ export default function TopBar(): JSX.Element {
     }
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
   };
@@ -54,7 +55,10 @@ export default function TopBar(): JSX.Element {
         {/* 搜索框 */}
         <div className="flex-1 max-w-md">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              size={18}
+            />
             <input
               type="text"
               placeholder="搜索环境..."
@@ -74,10 +78,7 @@ export default function TopBar(): JSX.Element {
             className="rounded-lg border border-input bg-background p-2 text-foreground hover:bg-muted disabled:opacity-50"
             title="刷新环境列表"
           >
-            <RefreshCw
-              size={18}
-              className={isRefreshing ? 'animate-spin-slow' : ''}
-            />
+            <RefreshCw size={18} className={isRefreshing ? 'animate-spin-slow' : ''} />
           </button>
 
           {/* 一键体检按钮 */}

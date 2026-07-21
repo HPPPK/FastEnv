@@ -7,6 +7,7 @@ import { app, BrowserWindow, dialog, ipcMain, WebContents } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { IPCRequest, IPCResponse } from '../../src/types/ipc';
+import { logger } from '../../service/logger/logger';
 import { systemScanner } from '../../service/env-scan/system-scanner';
 import { demandParser } from '../../service/demand-parse/parser';
 import { conflictDetector } from '../../service/env-conflict/detector';
@@ -15,12 +16,15 @@ import { environmentCreator } from '../../service/env-create/creator';
 import { persistenceManager } from '../../service/storage/persistence';
 import { registerAIIntegrationHandlers } from './ai-integration-handler';
 import EnvironmentCreator from '../../service/env-create/env-creator';
-import EnvironmentInstaller from '../../service/env-install/env-installer';
+import EnvironmentInstaller, {
+  type InstallProgress,
+} from '../../service/env-install/env-installer';
 import { ConflictDetector } from '../../service/env-conflict/conflict-detector';
 import { ConflictFixer } from '../../service/env-conflict/conflict-fixer';
 import { SystemFixer } from '../../service/system-fix/system-fixer';
-import type { Dependency } from '../../src/types';
+import type { AppSettings, Dependency } from '../../src/types';
 import type { Environment } from '../../src/types';
+import type { ConflictIssue } from '../../service/env-conflict/conflict-detector';
 import type { EnvironmentCreateProgress } from '../../service/env-create/creator';
 
 // 初始化服务实例
@@ -99,10 +103,14 @@ export function setupIPC(mainWindow: BrowserWindow): void {
   // 注册 AI 集成处理程序
   registerAIIntegrationHandlers();
 
-  console.log('[IPC] Setup completed');
+  logger.info('IPC', 'Setup completed');
 }
 
-async function handleIPCRequest(channel: string, data: unknown, sender?: WebContents): Promise<unknown> {
+async function handleIPCRequest(
+  channel: string,
+  data: unknown,
+  sender?: WebContents
+): Promise<unknown> {
   switch (channel) {
     case 'system:scan':
       return filterDeletedScanResult(await systemScanner.scan());
@@ -128,7 +136,7 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
       const operationId = payload.operationId ?? `env-create-${Date.now()}`;
       const controller = new AbortController();
       createControllers.set(operationId, controller);
-      const emitProgress = (progress: EnvironmentCreateProgress) => {
+      const emitProgress = (progress: EnvironmentCreateProgress): void => {
         sender?.send('ipc:event', {
           channel: 'env:create:progress',
           data: progress,
@@ -223,10 +231,10 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
         payload.deleteData ??
         Boolean(
           environment.isVirtual ||
-            environment.tags.includes('managed') ||
-            environment.tags.includes('conda') ||
-            environment.tags.includes('venv') ||
-            environment.path.includes('/.envguard/envs/')
+          environment.tags.includes('managed') ||
+          environment.tags.includes('conda') ||
+          environment.tags.includes('venv') ||
+          environment.path.includes('/.envguard/envs/')
         );
 
       if (shouldDeleteData && !environment.tags.includes('system')) {
@@ -235,11 +243,12 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
 
       persistenceManager.markEnvironmentDeleted(environment);
       persistenceManager.saveEnvironments(
-        environments.filter(
-          (item) => item.id !== environment.id && item.path !== environment.path
-        )
+        environments.filter((item) => item.id !== environment.id && item.path !== environment.path)
       );
-      return { success: true, deletedData: shouldDeleteData && !environment.tags.includes('system') };
+      return {
+        success: true,
+        deletedData: shouldDeleteData && !environment.tags.includes('system'),
+      };
     }
 
     case 'demand:parse': {
@@ -287,7 +296,7 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
       return { config: persistenceManager.loadSettings() };
 
     case 'config:set':
-      return { success: persistenceManager.saveSettings(data as any) };
+      return { success: persistenceManager.saveSettings(data as AppSettings) };
 
     case 'log:get':
       return { logs: [], total: 0 };
@@ -312,8 +321,19 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
         environmentType: 'python' | 'node' | 'java' | 'go';
         packages: string[];
         mirrorSource?: string;
+        operationId?: string;
       };
-      return envInstaller.installPackages(payload);
+      const operationId =
+        payload.operationId ??
+        `dependency-install-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const emitProgress = (progress: InstallProgress): void => {
+        sender?.send('ipc:event', {
+          channel: 'dependency:install:progress',
+          data: { ...progress, operationId },
+          timestamp: Date.now(),
+        });
+      };
+      return envInstaller.installPackages({ ...payload, onProgress: emitProgress });
     }
 
     // 新增：获取已安装包列表
@@ -393,7 +413,7 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
     // 新增：修复环境冲突
     case 'conflict:fix-new': {
       const payload = data as {
-        issues: any[];
+        issues: ConflictIssue[];
         backupPath?: string;
       };
       return conflictFixerService.fixConflicts(payload);
@@ -426,7 +446,12 @@ async function handleIPCRequest(channel: string, data: unknown, sender?: WebCont
 }
 
 function sanitizeFileName(name: string): string {
-  const sanitized = name.trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+  const sanitized = name
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .split('')
+    .map((character) => (character.charCodeAt(0) < 32 ? '_' : character))
+    .join('');
   return sanitized || 'environment';
 }
 
@@ -455,7 +480,9 @@ function formatRequirementsFile(
   return [...header, ...body, ''].join('\n');
 }
 
-function filterDeletedScanResult(scanResult: Awaited<ReturnType<typeof systemScanner.scan>>) {
+function filterDeletedScanResult(
+  scanResult: Awaited<ReturnType<typeof systemScanner.scan>>
+): Awaited<ReturnType<typeof systemScanner.scan>> {
   const environments = scanResult.environments.filter(
     (environment) => !persistenceManager.isEnvironmentDeleted(environment)
   );

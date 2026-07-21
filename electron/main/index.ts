@@ -3,8 +3,7 @@
  * 负责应用生命周期、窗口管理、IPC 通信
  */
 
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
+import { app, BrowserWindow } from 'electron';
 import { isDev } from '../utils/env';
 import { createWindow } from './window';
 import { setupIPC } from '../ipc/setup';

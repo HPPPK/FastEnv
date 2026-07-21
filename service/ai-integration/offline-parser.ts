@@ -4,7 +4,7 @@
  * 支持：需求文本解析、错误日志分析、配置文件识别
  */
 
-import type { DemandAnalysis, Environment } from '../../src/types';
+import type { DemandAnalysis } from '../../src/types';
 import { logger } from '../logger/logger';
 
 /**
@@ -27,15 +27,57 @@ export class OfflineParser {
    */
   private readonly techStackKeywords = {
     python: {
-      keywords: ['python', 'py', 'pip', 'venv', 'virtualenv', 'conda', 'anaconda', 'django', 'flask', 'fastapi', 'numpy', 'pandas', 'tensorflow', 'pytorch', 'scikit-learn'],
+      keywords: [
+        'python',
+        'py',
+        'pip',
+        'venv',
+        'virtualenv',
+        'conda',
+        'anaconda',
+        'django',
+        'flask',
+        'fastapi',
+        'numpy',
+        'pandas',
+        'tensorflow',
+        'pytorch',
+        'scikit-learn',
+      ],
       versions: ['3.11', '3.10', '3.9', '3.8', '3.7', '2.7'],
     },
     nodejs: {
-      keywords: ['node', 'npm', 'yarn', 'pnpm', 'express', 'react', 'vue', 'angular', 'next', 'nuxt', 'nest', 'javascript', 'typescript', 'js', 'ts'],
+      keywords: [
+        'node',
+        'npm',
+        'yarn',
+        'pnpm',
+        'express',
+        'react',
+        'vue',
+        'angular',
+        'next',
+        'nuxt',
+        'nest',
+        'javascript',
+        'typescript',
+        'js',
+        'ts',
+      ],
       versions: ['20.x', '18.x', '16.x', '14.x', '12.x'],
     },
     java: {
-      keywords: ['java', 'maven', 'gradle', 'spring', 'springboot', 'jdk', 'tomcat', 'junit', 'mockito'],
+      keywords: [
+        'java',
+        'maven',
+        'gradle',
+        'spring',
+        'springboot',
+        'jdk',
+        'tomcat',
+        'junit',
+        'mockito',
+      ],
       versions: ['21', '20', '19', '18', '17', '16', '15', '11', '8'],
     },
     go: {
@@ -56,13 +98,51 @@ export class OfflineParser {
    * 场景关键词库
    */
   private readonly scenarioKeywords = {
-    web_backend: ['api', '接口', '后端', 'backend', 'server', '服务器', 'rest', 'graphql', 'microservice'],
+    web_backend: [
+      'api',
+      '接口',
+      '后端',
+      'backend',
+      'server',
+      '服务器',
+      'rest',
+      'graphql',
+      'microservice',
+    ],
     web_frontend: ['前端', 'frontend', 'ui', 'ux', 'react', 'vue', 'angular', 'web', '网页'],
-    data_analysis: ['数据分析', 'data analysis', 'pandas', 'numpy', 'matplotlib', 'seaborn', 'jupyter', '数据'],
-    machine_learning: ['机器学习', 'ml', 'ai', '人工智能', 'tensorflow', 'pytorch', 'scikit-learn', 'deep learning', '深度学习'],
+    data_analysis: [
+      '数据分析',
+      'data analysis',
+      'pandas',
+      'numpy',
+      'matplotlib',
+      'seaborn',
+      'jupyter',
+      '数据',
+    ],
+    machine_learning: [
+      '机器学习',
+      'ml',
+      'ai',
+      '人工智能',
+      'tensorflow',
+      'pytorch',
+      'scikit-learn',
+      'deep learning',
+      '深度学习',
+    ],
     desktop_app: ['桌面', 'desktop', 'electron', 'qt', 'wxpython', 'tkinter', '应用程序'],
     mobile_app: ['移动', 'mobile', 'android', 'ios', 'react native', 'flutter'],
-    devops: ['devops', 'docker', 'kubernetes', 'ci/cd', 'jenkins', 'gitlab', 'github actions', '部署'],
+    devops: [
+      'devops',
+      'docker',
+      'kubernetes',
+      'ci/cd',
+      'jenkins',
+      'gitlab',
+      'github actions',
+      '部署',
+    ],
     database: ['数据库', 'database', 'mysql', 'postgresql', 'mongodb', 'redis', 'sqlite'],
   };
 
@@ -168,10 +248,13 @@ export class OfflineParser {
     // 2. 提取相关信息
     const extractedInfo = this.extractErrorInfo(errorLog);
     analysis.detectedLanguages = extractedInfo.languages;
-    analysis.detectedVersions = extractedInfo.versions.map(v => ({ language: 'unknown', version: v }));
+    analysis.detectedVersions = extractedInfo.versions.map((v) => ({
+      language: 'unknown',
+      version: v,
+    }));
 
     // 3. 生成修复建议
-    analysis.recommendations = this.generateErrorFixSuggestions(errorTypes, extractedInfo);
+    analysis.recommendations = this.generateErrorFixSuggestions(errorTypes);
 
     // 计算置信度
     analysis.confidence = Math.min(100, errorTypes.length * 20 + 40);
@@ -214,7 +297,10 @@ export class OfflineParser {
     // 2. 解析配置内容
     const parsedConfig = this.parseConfigContent(content, configType);
     analysis.detectedLanguages = parsedConfig.languages;
-    analysis.detectedVersions = parsedConfig.versions.map(v => ({ language: 'unknown', version: v }));
+    analysis.detectedVersions = parsedConfig.versions.map((v) => ({
+      language: 'unknown',
+      version: v,
+    }));
     analysis.requiredDependencies = parsedConfig.dependencies;
 
     // 3. 生成建议
@@ -291,7 +377,7 @@ export class OfflineParser {
     const lowerText = text.toLowerCase();
 
     // 提取常见的依赖名称
-    const depPattern = /(?:import|require|from|use|include)\s+([a-zA-Z0-9_\-\.]+)/gi;
+    const depPattern = /(?:import|require|from|use|include)\s+([a-zA-Z0-9_.-]+)/gi;
     let match;
 
     while ((match = depPattern.exec(text)) !== null) {
@@ -463,7 +549,9 @@ export class OfflineParser {
     }
 
     if (analysis.detectedVersions.length > 0) {
-      recommendations.push(`建议创建隔离虚拟环境以支持指定版本: ${analysis.detectedVersions.map((v) => `${v.language}@${v.version}`).join(', ')}`);
+      recommendations.push(
+        `建议创建隔离虚拟环境以支持指定版本: ${analysis.detectedVersions.map((v) => `${v.language}@${v.version}`).join(', ')}`
+      );
     }
 
     if (analysis.requiredDependencies.length > 0) {
@@ -501,10 +589,7 @@ export class OfflineParser {
   /**
    * 生成错误修复建议
    */
-  private generateErrorFixSuggestions(
-    errorTypes: string[],
-    extractedInfo: { languages: string[]; versions: string[] }
-  ): string[] {
+  private generateErrorFixSuggestions(errorTypes: string[]): string[] {
     const suggestions: string[] = [];
 
     for (const errorType of errorTypes) {
@@ -560,7 +645,10 @@ export class OfflineParser {
   /**
    * 生成配置建议
    */
-  private generateConfigRecommendations(configType: string, parsedConfig: any): string[] {
+  private generateConfigRecommendations(
+    configType: string,
+    parsedConfig: { languages: string[]; dependencies: string[]; versions: string[] }
+  ): string[] {
     const recommendations: string[] = [];
 
     recommendations.push(`识别到 ${configType} 配置文件`);
@@ -583,7 +671,7 @@ export class OfflineParser {
   /**
    * 生成配置警告
    */
-  private generateConfigWarnings(parsedConfig: any): string[] {
+  private generateConfigWarnings(parsedConfig: { dependencies: string[] }): string[] {
     const warnings: string[] = [];
 
     if (parsedConfig.dependencies.length > 100) {

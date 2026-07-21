@@ -3,7 +3,7 @@
  * 显示所有开发环境卡片，支持缓存和手动刷新
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useEnvStore } from '../store/envStore';
 import { useUIStore } from '../store/uiStore';
@@ -13,11 +13,12 @@ import EmptyState from '../components/common/EmptyState';
 import { mergeEnvironments } from '../utils/env-merge';
 
 export default function Home(): JSX.Element {
-  const { environments, isLoading, error, setEnvironments, setLoading, setError, setLastScanTime } = useEnvStore();
+  const { environments, isLoading, error, setEnvironments, setLoading, setError, setLastScanTime } =
+    useEnvStore();
   const { searchQuery, addNotification } = useUIStore();
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
-  const [cacheExpiry, setCacheExpiry] = useState<number | null>(null);
+  const cacheExpiryRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,7 +26,7 @@ export default function Home(): JSX.Element {
     const loadEnvironments = async (): Promise<void> => {
       // 检查缓存是否有效
       const now = Date.now();
-      if (lastRefreshTime && cacheExpiry && now < cacheExpiry && environments.length > 0) {
+      if (now < cacheExpiryRef.current) {
         setLoading(false);
         return;
       }
@@ -43,7 +44,7 @@ export default function Home(): JSX.Element {
         setLastScanTime(scan.timestamp);
         setLastRefreshTime(Date.now());
         // 设置缓存过期时间为 5 分钟
-        setCacheExpiry(Date.now() + 5 * 60 * 1000);
+        cacheExpiryRef.current = Date.now() + 5 * 60 * 1000;
       } catch (loadError) {
         if (cancelled) return;
         const message = loadError instanceof Error ? loadError.message : '环境列表加载失败';
@@ -65,10 +66,10 @@ export default function Home(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [addNotification, setEnvironments, setError, setLastScanTime, setLoading, lastRefreshTime, cacheExpiry, environments.length]);
+  }, [addNotification, setEnvironments, setError, setLastScanTime, setLoading]);
 
   // 手动刷新
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     setRefreshing(true);
     setError(null);
 
@@ -80,7 +81,7 @@ export default function Home(): JSX.Element {
       setEnvironments(merged);
       setLastScanTime(scan.timestamp);
       setLastRefreshTime(Date.now());
-      setCacheExpiry(Date.now() + 5 * 60 * 1000);
+      cacheExpiryRef.current = Date.now() + 5 * 60 * 1000;
 
       addNotification({
         type: 'success',
@@ -101,9 +102,10 @@ export default function Home(): JSX.Element {
   };
 
   // 过滤环境
-  const filteredEnvironments = environments.filter((env) =>
-    env.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    env.type.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredEnvironments = environments.filter(
+    (env) =>
+      env.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      env.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading && environments.length === 0) {
@@ -136,13 +138,7 @@ export default function Home(): JSX.Element {
   }
 
   if (error && environments.length === 0) {
-    return (
-      <EmptyState
-        title="环境列表加载失败"
-        description={error}
-        icon="Package"
-      />
-    );
+    return <EmptyState title="环境列表加载失败" description={error} icon="Package" />;
   }
 
   return (

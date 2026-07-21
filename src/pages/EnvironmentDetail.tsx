@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Copy, Download, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useEnvStore } from '../store/envStore';
-import { envguardApi } from '../api/envguard';
 
 interface EnvironmentInfo {
   id: string;

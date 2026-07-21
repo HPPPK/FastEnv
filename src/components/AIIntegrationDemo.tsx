@@ -16,7 +16,7 @@ export const AIIntegrationDemo: React.FC = () => {
 
   // 初始化 AI 集成
   useEffect(() => {
-    const init = async () => {
+    const init = async (): Promise<void> => {
       try {
         const result = await aiIntegrationAPI.initialize();
         if (result.success) {
@@ -36,7 +36,7 @@ export const AIIntegrationDemo: React.FC = () => {
   }, []);
 
   // 解析需求
-  const handleParseRequirement = async () => {
+  const handleParseRequirement = async (): Promise<void> => {
     if (!requirementText.trim()) {
       alert('请输入需求文本');
       return;
@@ -109,10 +109,7 @@ export const AIIntegrationDemo: React.FC = () => {
                 <p className="text-sm font-semibold">检测到的语言:</p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {analysis.detectedLanguages.map((lang) => (
-                    <span
-                      key={lang}
-                      className="px-2 py-1 bg-blue-600 rounded text-xs"
-                    >
+                    <span key={lang} className="px-2 py-1 bg-blue-600 rounded text-xs">
                       {lang}
                     </span>
                   ))}
@@ -126,14 +123,9 @@ export const AIIntegrationDemo: React.FC = () => {
                 <p className="text-sm font-semibold">检测到的版本:</p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {analysis.detectedVersions.map((version, idx) => {
-                    const versionStr = typeof version === 'string' 
-                      ? version 
-                      : `${(version as any).language} ${(version as any).version}`;
+                    const versionStr = `${version.language} ${version.version}`;
                     return (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-green-600 rounded text-xs"
-                      >
+                      <span key={idx} className="px-2 py-1 bg-green-600 rounded text-xs">
                         {versionStr}
                       </span>
                     );

@@ -30,7 +30,7 @@ export default function EnvironmentCard({ environment }: EnvironmentCardProps): 
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setDeleting] = useState(false);
 
-  const getStatusIcon = () => {
+  const getStatusIcon = (): JSX.Element => {
     switch (environment.status) {
       case 'healthy':
         return <CheckCircle size={16} className="text-green-500" />;
@@ -43,7 +43,7 @@ export default function EnvironmentCard({ environment }: EnvironmentCardProps): 
     }
   };
 
-  const getStatusText = () => {
+  const getStatusText = (): string => {
     switch (environment.status) {
       case 'healthy':
         return '正常';
@@ -56,7 +56,7 @@ export default function EnvironmentCard({ environment }: EnvironmentCardProps): 
     }
   };
 
-  const getTypeLabel = () => {
+  const getTypeLabel = (): string => {
     const typeMap: Record<string, string> = {
       python: 'Python',
       node: 'Node.js',
@@ -68,8 +68,12 @@ export default function EnvironmentCard({ environment }: EnvironmentCardProps): 
     return typeMap[environment.type] || environment.type;
   };
 
-  const handleDelete = async () => {
-    if (!confirm(`确定要删除环境 "${environment.name}" 吗？这会从 EnvGuard 缓存中移除该环境；受管虚拟环境也会删除本地环境目录。`)) {
+  const handleDelete = async (): Promise<void> => {
+    if (
+      !confirm(
+        `确定要删除环境 "${environment.name}" 吗？这会从 EnvGuard 缓存中移除该环境；受管虚拟环境也会删除本地环境目录。`
+      )
+    ) {
       return;
     }
 

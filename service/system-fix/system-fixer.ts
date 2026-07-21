@@ -4,6 +4,7 @@
  */
 
 import * as path from 'path';
+import { logger } from '../logger/logger';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 
@@ -27,20 +28,16 @@ export interface SystemFixResult {
   failedItems: string[];
   backupPath?: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export class SystemFixer {
-  private log(level: string, message: string): void {
-    console.log(`[${level}] [SystemFixer] ${message}`);
-  }
-
   private info(message: string): void {
-    this.log('INFO', message);
+    logger.info('SystemFixer', message);
   }
 
   private error(message: string): void {
-    this.log('ERROR', message);
+    logger.error('SystemFixer', message);
   }
 
   /**
@@ -248,7 +245,7 @@ export class SystemFixer {
       if (fs.existsSync(dir)) {
         try {
           // 设置目录权限为 755
-          execSync(`chmod -R 755 "${dir}"`, { stdio: 'inherit' } as any);
+          execSync(`chmod -R 755 "${dir}"`, { stdio: 'inherit' });
           this.info(`已修复权限: ${dir}`);
         } catch (err) {
           this.error(`权限修复失败: ${dir} - ${err}`);

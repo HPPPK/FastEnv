@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, type ChangeEvent, type FC } from 'react';
 import { AlertCircle, CheckCircle, Zap, RefreshCw, Download, Upload } from 'lucide-react';
-import { useEnvStore } from '../store/envStore';
 import { envguardApi } from '../api/envguard';
+import type { EnvironmentConflict } from '../types';
 
 interface ConflictItem {
   id: string;
@@ -13,25 +13,51 @@ interface ConflictItem {
   suggestedFix: string;
 }
 
-export const ConflictFix: React.FC = () => {
-  const { environments } = useEnvStore();
+export const ConflictFix: FC = () => {
   const [loading, setLoading] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
-  const [repairResult, setRepairResult] = useState<any>(null);
-  const [uploadedLog, setUploadedLog] = useState<string>('');
+  const [repairResult, setRepairResult] = useState<{
+    success: boolean;
+    message?: string;
+    fixedConflicts?: string[];
+    failedConflicts?: string[];
+    backupPath?: string;
+    repairRecord?: unknown;
+  } | null>(null);
   const [showRepairPreview, setShowRepairPreview] = useState(false);
 
   // 扫描冲突
-  const handleScanConflicts = async () => {
+  const handleScanConflicts = async (): Promise<void> => {
     setLoading(true);
     try {
       const result = await envguardApi.detectConflicts();
-      if (result && Array.isArray(result)) {
-        setConflicts(result);
-      } else {
-        setConflicts([]);
-      }
+      const normalizedConflicts = result.conflicts.map(
+        (conflict: EnvironmentConflict): ConflictItem => ({
+          id: conflict.id,
+          type: conflict.type.includes('path')
+            ? 'path'
+            : conflict.type.includes('version')
+              ? 'version'
+              : conflict.type.includes('dependency')
+                ? 'dependency'
+                : conflict.type.includes('permission')
+                  ? 'permission'
+                  : 'config',
+          severity:
+            conflict.severity === 'critical'
+              ? 'critical'
+              : conflict.severity === 'high' || conflict.severity === 'medium'
+                ? 'warning'
+                : 'info',
+          title: conflict.type.replace(/[-_]/g, ' '),
+          description: conflict.description,
+          affectedItems: conflict.affectedEnvironments,
+          suggestedFix: conflict.suggestedFix ?? conflict.suggestion ?? '请查看修复记录后再处理。',
+        })
+      );
+      setConflicts(normalizedConflicts);
+      setRepairResult(null);
     } catch (error) {
       console.error('Failed to detect conflicts:', error);
       setConflicts([]);
@@ -41,7 +67,7 @@ export const ConflictFix: React.FC = () => {
   };
 
   // 一键修复
-  const handleAutoRepair = async () => {
+  const handleAutoRepair = async (): Promise<void> => {
     setRepairing(true);
     try {
       const result = await envguardApi.fixConflicts();
@@ -64,21 +90,16 @@ export const ConflictFix: React.FC = () => {
   };
 
   // 处理日志上传
-  const handleLogUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogUpload = (e: ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target?.result as string;
-        setUploadedLog(content);
-        // 可以在这里调用 API 分析日志中的冲突
-      };
-      reader.readAsText(file);
+      // TODO: 接入日志内容解析 IPC。
+      void file;
     }
   };
 
   // 获取冲突严重程度的颜色
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string): string => {
     switch (severity) {
       case 'critical':
         return 'bg-red-50 border-red-200';
@@ -92,7 +113,7 @@ export const ConflictFix: React.FC = () => {
   };
 
   // 获取冲突严重程度的图标颜色
-  const getSeverityIconColor = (severity: string) => {
+  const getSeverityIconColor = (severity: string): string => {
     switch (severity) {
       case 'critical':
         return 'text-red-600';
@@ -142,12 +163,7 @@ export const ConflictFix: React.FC = () => {
                 <Upload size={24} className="mx-auto mb-2 text-slate-400" />
                 <p className="text-sm text-slate-400">点击上传错误日志</p>
               </div>
-              <input
-                type="file"
-                onChange={handleLogUpload}
-                className="hidden"
-                accept=".log,.txt"
-              />
+              <input type="file" onChange={handleLogUpload} className="hidden" accept=".log,.txt" />
             </label>
           </div>
         </div>
@@ -200,9 +216,7 @@ export const ConflictFix: React.FC = () => {
         {repairResult && (
           <div
             className={`rounded-lg border p-6 mb-8 ${
-              repairResult.success
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
+              repairResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
             }`}
           >
             <div className="flex items-start gap-4">
@@ -240,9 +254,7 @@ export const ConflictFix: React.FC = () => {
                   </div>
                 )}
                 {repairResult.backupPath && (
-                  <p className="text-sm text-slate-700 mt-2">
-                    备份路径：{repairResult.backupPath}
-                  </p>
+                  <p className="text-sm text-slate-700 mt-2">备份路径：{repairResult.backupPath}</p>
                 )}
               </div>
             </div>
@@ -276,6 +288,42 @@ export const ConflictFix: React.FC = () => {
             <CheckCircle size={48} className="mx-auto mb-4 text-green-600" />
             <h3 className="text-xl font-semibold text-white mb-2">未检测到冲突</h3>
             <p className="text-slate-400">您的环境配置良好，无需修复</p>
+          </div>
+        )}
+
+        {showRepairPreview && conflicts.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-slate-600 bg-slate-800 p-6 shadow-xl">
+              <h2 className="mb-4 text-xl font-semibold text-white">修复方案预览</h2>
+              <p className="mb-4 text-sm text-slate-300">
+                以下操作将由主进程执行。请确认已阅读影响范围；系统修复前会尝试创建备份。
+              </p>
+              <div className="space-y-3">
+                {conflicts.map((conflict) => (
+                  <div key={conflict.id} className="rounded border border-slate-600 p-3">
+                    <p className="font-medium text-white">{conflict.title}</p>
+                    <p className="mt-1 text-sm text-slate-300">{conflict.suggestedFix}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowRepairPreview(false)}
+                  className="rounded-lg border border-slate-500 px-4 py-2 text-sm text-white hover:bg-slate-700"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRepairPreview(false);
+                    void handleAutoRepair();
+                  }}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  确认修复
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

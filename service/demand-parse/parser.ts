@@ -14,7 +14,17 @@ export class DemandParser {
    */
   private keywordRules = {
     python: {
-      keywords: ['python', 'py', 'django', 'flask', 'fastapi', 'pandas', 'numpy', 'tensorflow', 'pytorch'],
+      keywords: [
+        'python',
+        'py',
+        'django',
+        'flask',
+        'fastapi',
+        'pandas',
+        'numpy',
+        'tensorflow',
+        'pytorch',
+      ],
       type: 'python',
     },
     node: {
@@ -40,7 +50,7 @@ export class DemandParser {
    */
   private versionPatterns = [
     /python\s*(\d+\.\d+\.\d+|\d+\.\d+)/gi,
-    /node(?:js)?\s*(\d+\.\d+\.\d+|\d+\.\d+)/gi,
+    /node(?:\.?js)?\s*(\d+(?:\.\d+){0,2})/gi,
     /java\s*(\d+)/gi,
     /go\s*(\d+\.\d+\.\d+|\d+\.\d+)/gi,
   ];
@@ -64,12 +74,7 @@ export class DemandParser {
     const scenario = this.detectScenario(lowerText);
 
     // 生成推荐方案
-    const recommendation = this.generateRecommendation(
-      detectedTypes,
-      versions,
-      dependencies,
-      scenario
-    );
+    const recommendation = this.generateRecommendation(detectedTypes, versions, dependencies);
 
     return {
       success: true,
@@ -88,8 +93,10 @@ export class DemandParser {
   private detectTechStack(text: string): string[] {
     const detected: string[] = [];
 
-    for (const [key, rule] of Object.entries(this.keywordRules)) {
-      const hasKeyword = rule.keywords.some((kw) => text.includes(kw));
+    for (const rule of Object.values(this.keywordRules)) {
+      const hasKeyword = rule.keywords.some((kw) =>
+        new RegExp('(^|[^a-z0-9])' + kw + '([^a-z0-9]|$)', 'i').test(text)
+      );
       if (hasKeyword) {
         detected.push(rule.type);
       }
@@ -107,7 +114,10 @@ export class DemandParser {
     for (const pattern of this.versionPatterns) {
       const matches = text.matchAll(pattern);
       for (const match of matches) {
-        const toolName = match[0].split(/\s+/)[0].toLowerCase();
+        const toolName = match[0]
+          .split(/\s+/)[0]
+          .toLowerCase()
+          .replace(/\.?js$/, '');
         if (match[1]) {
           versions[toolName] = match[1];
         }
@@ -123,9 +133,26 @@ export class DemandParser {
   private extractDependencies(text: string): string[] {
     const dependencies: string[] = [];
 
-    const addDependency = (name?: string) => {
+    const addDependency = (name?: string): void => {
       const normalized = name?.trim().replace(/[，。；;、,.]+$/g, '');
-      const ignored = ['python', 'node', 'nodejs', 'java', 'go', 'rust'];
+      const ignored = [
+        'python',
+        'node',
+        'nodejs',
+        'java',
+        'go',
+        'rust',
+        'and',
+        'or',
+        'with',
+        'using',
+        'use',
+        'for',
+        'the',
+        'a',
+        'an',
+        'plus',
+      ];
       if (
         normalized &&
         !ignored.includes(normalized) &&
@@ -156,12 +183,29 @@ export class DemandParser {
       'notebook',
       'scipy',
       'statsmodels',
+      'react',
+      'react-dom',
+      'typescript',
+      'vite',
+      'axios',
+      'vue',
+      'angular',
+      'express',
+      'spring-boot',
+      'springboot',
+      'mysql',
+      'maven',
+      'junit',
     ];
 
     for (const pkg of knownPackages) {
       if (text.includes(pkg)) {
         addDependency(pkg === 'sklearn' ? 'scikit-learn' : pkg);
       }
+    }
+
+    if (text.includes('spring boot') || text.includes('springboot')) {
+      addDependency('spring-boot');
     }
 
     // 支持 “安装 numpy、pandas、scikit-learn” / “需要 xxx, yyy” 这类中文自然语言
@@ -207,8 +251,8 @@ export class DemandParser {
       'web-backend': ['后端', 'backend', 'api', 'django', 'flask', 'express', 'spring'],
       'web-frontend': ['前端', 'frontend', 'react', 'vue', 'angular', 'typescript'],
       'ai-ml': ['ai', 'machine learning', 'tensorflow', 'pytorch', 'scikit-learn'],
-      'desktop': ['桌面', 'desktop', 'electron', 'tauri', 'qt'],
-      'devops': ['devops', 'docker', 'kubernetes', 'ci/cd'],
+      desktop: ['桌面', 'desktop', 'electron', 'tauri', 'qt'],
+      devops: ['devops', 'docker', 'kubernetes', 'ci/cd'],
     };
 
     for (const [scenario, keywords] of Object.entries(scenarios)) {
@@ -226,8 +270,7 @@ export class DemandParser {
   private generateRecommendation(
     types: string[],
     versions: Record<string, string>,
-    dependencies: string[],
-    scenario: string
+    dependencies: string[]
   ): EnvironmentRecommendation {
     const primaryType = types[0] || 'python';
 

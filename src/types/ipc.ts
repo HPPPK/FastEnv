@@ -8,9 +8,7 @@ import type {
   SystemScanResult,
   EnvironmentConflict,
   RepairRecord,
-  UserDemand,
   DemandAnalysis,
-  OperationResult,
   UserConfig,
 } from './index';
 

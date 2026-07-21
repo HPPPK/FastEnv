@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import type { Environment, EnvironmentStatus } from '../types';
+import { envguardApi } from '../api/envguard';
 
 interface EnvStoreState {
   // 状态
@@ -27,6 +28,7 @@ interface EnvStoreState {
   getEnvironmentsByType: (type: string) => Environment[];
   getEnvironmentsByStatus: (status: EnvironmentStatus) => Environment[];
   clearAll: () => void;
+  refreshEnvironments: () => Promise<void>;
 }
 
 export const useEnvStore = create<EnvStoreState>((set, get) => ({
@@ -38,19 +40,19 @@ export const useEnvStore = create<EnvStoreState>((set, get) => ({
   lastScanTime: null,
 
   // 设置环境列表
-  setEnvironments: (environments: Environment[]) => {
+  setEnvironments: (environments: Environment[]): void => {
     set({ environments });
   },
 
   // 添加环境
-  addEnvironment: (environment: Environment) => {
+  addEnvironment: (environment: Environment): void => {
     set((state) => ({
       environments: [...state.environments, environment],
     }));
   },
 
   // 更新环境
-  updateEnvironment: (id: string, updates: Partial<Environment>) => {
+  updateEnvironment: (id: string, updates: Partial<Environment>): void => {
     set((state) => ({
       environments: state.environments.map((env) =>
         env.id === id ? { ...env, ...updates, updatedAt: Date.now() } : env
@@ -59,51 +61,50 @@ export const useEnvStore = create<EnvStoreState>((set, get) => ({
   },
 
   // 删除环境
-  deleteEnvironment: (id: string) => {
+  deleteEnvironment: (id: string): void => {
     set((state) => ({
       environments: state.environments.filter((env) => env.id !== id),
-      activeEnvironmentId:
-        state.activeEnvironmentId === id ? null : state.activeEnvironmentId,
+      activeEnvironmentId: state.activeEnvironmentId === id ? null : state.activeEnvironmentId,
     }));
   },
 
   // 设置活跃环境
-  setActiveEnvironment: (id: string | null) => {
+  setActiveEnvironment: (id: string | null): void => {
     set({ activeEnvironmentId: id });
   },
 
   // 设置加载状态
-  setLoading: (loading: boolean) => {
+  setLoading: (loading: boolean): void => {
     set({ isLoading: loading });
   },
 
   // 设置错误信息
-  setError: (error: string | null) => {
+  setError: (error: string | null): void => {
     set({ error });
   },
 
   // 设置最后扫描时间
-  setLastScanTime: (time: number) => {
+  setLastScanTime: (time: number): void => {
     set({ lastScanTime: time });
   },
 
   // 根据ID获取环境
-  getEnvironmentById: (id: string) => {
+  getEnvironmentById: (id: string): Environment | undefined => {
     return get().environments.find((env) => env.id === id);
   },
 
   // 根据类型获取环境
-  getEnvironmentsByType: (type: string) => {
+  getEnvironmentsByType: (type: string): Environment[] => {
     return get().environments.filter((env) => env.type === type);
   },
 
   // 根据状态获取环境
-  getEnvironmentsByStatus: (status: EnvironmentStatus) => {
+  getEnvironmentsByStatus: (status: EnvironmentStatus): Environment[] => {
     return get().environments.filter((env) => env.status === status);
   },
 
   // 清空所有状态
-  clearAll: () => {
+  clearAll: (): void => {
     set({
       environments: [],
       activeEnvironmentId: null,
@@ -114,10 +115,9 @@ export const useEnvStore = create<EnvStoreState>((set, get) => ({
   },
 
   // 刷新环境列表
-  refreshEnvironments: async () => {
+  refreshEnvironments: async (): Promise<void> => {
     set({ isLoading: true });
     try {
-      const { envguardApi } = await import('../api/envguard');
       const environments = await envguardApi.listEnvironments();
       set({
         environments,

@@ -36,11 +36,14 @@ class IPCError extends Error {
  */
 class IPCClient {
   private requestId = 0;
-  private pendingRequests = new Map<string, {
-    resolve: (value: any) => void;
-    reject: (reason?: unknown) => void;
-    timeout: NodeJS.Timeout;
-  }>();
+  private pendingRequests = new Map<
+    string,
+    {
+      resolve: (value: unknown) => void;
+      reject: (reason?: unknown) => void;
+      timeout: NodeJS.Timeout;
+    }
+  >();
 
   constructor() {
     this.setupListeners();
@@ -56,25 +59,29 @@ class IPCClient {
     }
 
     // 监听 IPC 响应
-    window.ipcRenderer.on('ipc:response', (event: any, response: IPCResponse) => {
-      const { id } = response;
-      const pending = this.pendingRequests.get(id);
+    window.ipcRenderer.on(
+      'ipc:response',
+      (_event: Electron.IpcRendererEvent, data: unknown): void => {
+        const response = data as IPCResponse;
+        const { id } = response;
+        const pending = this.pendingRequests.get(id);
 
-      if (pending) {
-        clearTimeout(pending.timeout);
-        this.pendingRequests.delete(id);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          this.pendingRequests.delete(id);
 
-        if (response.success) {
-          pending.resolve(response.data);
-        } else {
-          const error = response.error || { code: 'UNKNOWN_ERROR', message: 'Unknown error' };
-          pending.reject(new IPCError(error.code, error.message, error.details));
+          if (response.success) {
+            pending.resolve(response.data);
+          } else {
+            const error = response.error || { code: 'UNKNOWN_ERROR', message: 'Unknown error' };
+            pending.reject(new IPCError(error.code, error.message, error.details));
+          }
         }
       }
-    });
+    );
 
     // 监听 IPC 错误
-    window.ipcRenderer.on('ipc:error', (event: any, error: any) => {
+    window.ipcRenderer.on('ipc:error', (_event: Electron.IpcRendererEvent, error: unknown) => {
       console.error('IPC Error:', error);
     });
   }
@@ -82,11 +89,7 @@ class IPCClient {
   /**
    * 发送 IPC 请求
    */
-  async invoke<T = unknown>(
-    channel: string,
-    data?: unknown,
-    timeout?: number
-  ): Promise<T> {
+  async invoke<T = unknown>(channel: string, data?: unknown, timeout?: number): Promise<T> {
     const id = `${channel}-${++this.requestId}-${Date.now()}`;
     const timeoutMs = timeout || TIMEOUTS.IPC_REQUEST;
 
@@ -99,7 +102,7 @@ class IPCClient {
 
       // 保存待处理请求
       this.pendingRequests.set(id, {
-        resolve,
+        resolve: (value: unknown) => resolve(value as T),
         reject,
         timeout: timeoutHandle,
       });
@@ -127,10 +130,11 @@ class IPCClient {
   on<T = unknown>(channel: string, callback: (data: T) => void): () => void {
     if (!window.ipcRenderer) {
       console.warn('IPC Renderer not available');
-      return () => {};
+      return (): void => {};
     }
 
-    const listener = (event: any, eventData: IPCEvent<T>) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown): void => {
+      const eventData = data as IPCEvent<T>;
       if (eventData.channel === channel) {
         callback(eventData.data);
       }
@@ -139,7 +143,7 @@ class IPCClient {
     window.ipcRenderer.on('ipc:event', listener);
 
     // 返回取消监听函数
-    return () => {
+    return (): void => {
       window.ipcRenderer?.removeListener('ipc:event', listener);
     };
   }
@@ -153,7 +157,8 @@ class IPCClient {
       return;
     }
 
-    const listener = (event: any, eventData: IPCEvent<T>) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown): void => {
+      const eventData = data as IPCEvent<T>;
       if (eventData.channel === channel) {
         window.ipcRenderer?.removeListener('ipc:event', listener);
         callback(eventData.data);
@@ -172,7 +177,10 @@ class IPCClient {
     }
 
     if (callback) {
-      window.ipcRenderer.removeListener('ipc:event', callback as any);
+      window.ipcRenderer.removeListener(
+        'ipc:event',
+        callback as unknown as (event: Electron.IpcRendererEvent, data: unknown) => void
+      );
     } else {
       window.ipcRenderer.removeAllListeners('ipc:event');
     }

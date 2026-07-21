@@ -6,7 +6,8 @@
 import React, { useEffect } from 'react';
 import { useUIStore } from './store/uiStore';
 import { useEnvStore } from './store/envStore';
-import { useSettingsStore } from './store/settingsStore';
+import { createDefaultSettings, useSettingsStore } from './store/settingsStore';
+import { envguardApi } from './api/envguard';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import NewEnv from './pages/NewEnv';
@@ -18,9 +19,6 @@ import RepairRecords from './pages/RepairRecords';
 import Help from './pages/Help';
 import NotificationCenter from './components/common/NotificationCenter';
 
-/**
- * 页面映射
- */
 const pageComponents: Record<string, React.ComponentType> = {
   home: Home,
   'new-env': NewEnv,
@@ -33,23 +31,47 @@ const pageComponents: Record<string, React.ComponentType> = {
 };
 
 export default function App(): JSX.Element {
-  const { currentPage, theme, setTheme } = useUIStore();
-  const { setLoading } = useEnvStore();
-  const { resetToDefault } = useSettingsStore();
+  const { currentPage, setTheme } = useUIStore();
+  const { setLoading: setEnvironmentLoading } = useEnvStore();
+  const {
+    setConfig,
+    setLoading: setSettingsLoading,
+    setError: setSettingsError,
+  } = useSettingsStore();
 
-  // 初始化应用
   useEffect(() => {
-    // 应用启动时初始化设置
-    resetToDefault();
+    let cancelled = false;
 
-    // 应用主题
-    setTheme(theme);
+    const initialize = async (): Promise<void> => {
+      setSettingsLoading(true);
+      setEnvironmentLoading(true);
+      setSettingsError(null);
 
-    // 模拟初始化完成
-    setLoading(false);
-  }, []);
+      try {
+        const config = await envguardApi.getConfig();
+        if (cancelled) return;
+        setConfig(config);
+        setTheme(config.theme);
+      } catch (error) {
+        if (cancelled) return;
+        const fallback = createDefaultSettings();
+        setConfig(fallback);
+        setTheme(fallback.theme);
+        setSettingsError(error instanceof Error ? error.message : '设置加载失败，已使用默认配置');
+      } finally {
+        if (!cancelled) {
+          setSettingsLoading(false);
+          setEnvironmentLoading(false);
+        }
+      }
+    };
 
-  // 获取当前页面组件
+    void initialize();
+    return () => {
+      cancelled = true;
+    };
+  }, [setConfig, setEnvironmentLoading, setSettingsError, setSettingsLoading, setTheme]);
+
   const CurrentPage = pageComponents[currentPage] || Home;
 
   return (

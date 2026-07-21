@@ -2,7 +2,13 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
-import { Environment, EnvironmentType, EnvironmentStatus, Dependency, SystemScanResult } from '../../src/types/index';
+import {
+  Environment,
+  EnvironmentType,
+  EnvironmentStatus,
+  Dependency,
+  SystemScanResult,
+} from '../../src/types/index';
 import { Logger } from '../logger/logger';
 
 export class SystemScanner {
@@ -49,7 +55,10 @@ export class SystemScanner {
         errorCount,
       };
     } catch (error) {
-      this.logger.error('System scan failed', error instanceof Error ? error.message : String(error));
+      this.logger.error(
+        'System scan failed',
+        error instanceof Error ? error.message : String(error)
+      );
       return {
         id: `scan-${this.hash(Date.now().toString())}`,
         timestamp: Date.now(),
@@ -92,75 +101,75 @@ export class SystemScanner {
     return environments;
   }
 
-   /**
-    * 扫描 Python 版本
-    */
-   private scanPythonVersions(): Environment[] {
-     const environments: Environment[] = [];
+  /**
+   * 扫描 Python 版本
+   */
+  private scanPythonVersions(): Environment[] {
+    const environments: Environment[] = [];
 
-     try {
-       const version = this.execute('python --version');
-       const match = version.match(/Python (\d+\.\d+\.\d+)/);
-       if (match) {
-         const pythonPath = this.execute('which python').trim();
-         const dependencies = this.scanPythonDependencies(pythonPath);
-         const timestamps = this.getPathTimestamps(pythonPath);
-         environments.push({
-           id: `env-${this.hash(pythonPath)}`,
-           name: 'Python (System)',
-           type: 'python' as EnvironmentType,
-           version: match[1],
-           status: 'healthy' as EnvironmentStatus,
-           path: pythonPath,
-           dependencies,
-           createdAt: timestamps.createdAt,
-           updatedAt: timestamps.updatedAt,
-           tags: ['system', 'python'],
-           isVirtual: false,
-           projectNote: '',
-         });
-       }
-     } catch (error) {
-       // Python not found
-     }
+    try {
+      const version = this.execute('python --version');
+      const match = version.match(/Python (\d+\.\d+\.\d+)/);
+      if (match) {
+        const pythonPath = this.resolveExecutable('python');
+        const dependencies = this.scanPythonDependencies(pythonPath);
+        const timestamps = this.getPathTimestamps(pythonPath);
+        environments.push({
+          id: `env-${this.hash(pythonPath)}`,
+          name: 'Python (System)',
+          type: 'python' as EnvironmentType,
+          version: match[1],
+          status: 'healthy' as EnvironmentStatus,
+          path: pythonPath,
+          dependencies,
+          createdAt: timestamps.createdAt,
+          updatedAt: timestamps.updatedAt,
+          tags: ['system', 'python'],
+          isVirtual: false,
+          projectNote: '',
+        });
+      }
+    } catch (error) {
+      // Python not found
+    }
 
-     return environments;
-   }
+    return environments;
+  }
 
-   /**
-    * 扫描 Node.js 版本
-    */
-   private scanNodeVersions(): Environment[] {
-     const environments: Environment[] = [];
+  /**
+   * 扫描 Node.js 版本
+   */
+  private scanNodeVersions(): Environment[] {
+    const environments: Environment[] = [];
 
-     try {
-       const version = this.execute('node --version');
-       const match = version.match(/v(\d+\.\d+\.\d+)/);
-       if (match) {
-         const nodePath = this.execute('which node').trim();
-         const dependencies = this.scanSystemNodeDependencies();
-         const timestamps = this.getPathTimestamps(nodePath);
-         environments.push({
-           id: `env-${this.hash(nodePath)}`,
-           name: 'Node.js (System)',
-           type: 'node' as EnvironmentType,
-           version: match[1],
-           status: 'healthy' as EnvironmentStatus,
-           path: nodePath,
-           dependencies,
-           createdAt: timestamps.createdAt,
-           updatedAt: timestamps.updatedAt,
-           tags: ['system', 'node'],
-           isVirtual: false,
-           projectNote: '',
-         });
-       }
-     } catch (error) {
-       // Node not found
-     }
+    try {
+      const version = this.execute('node --version');
+      const match = version.match(/v(\d+\.\d+\.\d+)/);
+      if (match) {
+        const nodePath = this.resolveExecutable('node');
+        const dependencies = this.scanSystemNodeDependencies();
+        const timestamps = this.getPathTimestamps(nodePath);
+        environments.push({
+          id: `env-${this.hash(nodePath)}`,
+          name: 'Node.js (System)',
+          type: 'node' as EnvironmentType,
+          version: match[1],
+          status: 'healthy' as EnvironmentStatus,
+          path: nodePath,
+          dependencies,
+          createdAt: timestamps.createdAt,
+          updatedAt: timestamps.updatedAt,
+          tags: ['system', 'node'],
+          isVirtual: false,
+          projectNote: '',
+        });
+      }
+    } catch (error) {
+      // Node not found
+    }
 
-     return environments;
-   }
+    return environments;
+  }
 
   /**
    * 扫描 Java 版本
@@ -169,10 +178,10 @@ export class SystemScanner {
     const environments: Environment[] = [];
 
     try {
-      const version = this.execute('java -version');
+      const version = this.execute('java -version 2>&1');
       const match = version.match(/version "(\d+\.\d+\.\d+)/);
       if (match) {
-        const javaPath = this.execute('which java').trim();
+        const javaPath = this.resolveExecutable('java');
         const timestamps = this.getPathTimestamps(javaPath);
         environments.push({
           id: `env-${this.hash(javaPath)}`,
@@ -206,7 +215,7 @@ export class SystemScanner {
       const version = this.execute('go version');
       const match = version.match(/go(\d+\.\d+\.\d+)/);
       if (match) {
-        const goPath = this.execute('which go').trim();
+        const goPath = this.resolveExecutable('go');
         const timestamps = this.getPathTimestamps(goPath);
         environments.push({
           id: `env-${this.hash(goPath)}`,
@@ -296,7 +305,10 @@ export class SystemScanner {
       this.logger.info(`Found ${deps.length} Python dependencies for ${pythonExecutable}`, 'scan');
       return deps;
     } catch (error) {
-      this.logger.warn(`Failed to scan Python dependencies: ${error instanceof Error ? error.message : String(error)}`, 'scan');
+      this.logger.warn(
+        `Failed to scan Python dependencies: ${error instanceof Error ? error.message : String(error)}`,
+        'scan'
+      );
       return [];
     }
   }
@@ -307,18 +319,20 @@ export class SystemScanner {
   private scanSystemNodeDependencies(): Dependency[] {
     try {
       const output = this.executeJsonCommand('npm list -g --depth=0 --json');
-      const data = JSON.parse(output);
+      const data = JSON.parse(output) as { dependencies?: Record<string, { version?: string }> };
       const packages = data.dependencies || {};
-      const deps = Object.entries(packages)
-        .map(([name, info]: [string, any]) => ({
-          name,
-          version: info.version || '0.0.0',
-          packageManager: 'npm' as const,
-        }));
+      const deps = Object.entries(packages).map(([name, info]) => ({
+        name,
+        version: info.version || '0.0.0',
+        packageManager: 'npm' as const,
+      }));
       this.logger.info(`Found ${deps.length} Node.js dependencies`, 'scan');
       return deps;
     } catch (error) {
-      this.logger.warn(`Failed to scan Node.js dependencies: ${error instanceof Error ? error.message : String(error)}`, 'scan');
+      this.logger.warn(
+        `Failed to scan Node.js dependencies: ${error instanceof Error ? error.message : String(error)}`,
+        'scan'
+      );
       return [];
     }
   }
@@ -352,14 +366,15 @@ export class SystemScanner {
         if (fs.existsSync(npmPath)) {
           try {
             const output = this.executeJsonCommand(`"${npmPath}" list --depth=0 --json`);
-            const data = JSON.parse(output);
+            const data = JSON.parse(output) as {
+              dependencies?: Record<string, { version?: string }>;
+            };
             if (data.dependencies) {
-              return Object.entries(data.dependencies)
-                .map(([name, info]: [string, any]) => ({
-                  name,
-                  version: info.version || 'unknown',
-                  packageManager: 'npm' as const,
-                }));
+              return Object.entries(data.dependencies).map(([name, info]) => ({
+                name,
+                version: info.version || 'unknown',
+                packageManager: 'npm' as const,
+              }));
             }
           } catch (error) {
             // npm list 失败，返回空数组
@@ -422,7 +437,10 @@ export class SystemScanner {
       this.logger.info(`Found ${deps.length} Conda dependencies for ${envPath}`, 'scan');
       return deps;
     } catch (error) {
-      this.logger.warn(`Failed to scan Conda dependencies for ${envPath}: ${error instanceof Error ? error.message : String(error)}`, 'scan');
+      this.logger.warn(
+        `Failed to scan Conda dependencies for ${envPath}: ${error instanceof Error ? error.message : String(error)}`,
+        'scan'
+      );
 
       const pythonPath = this.isWindows
         ? path.join(envPath, 'python.exe')
@@ -454,7 +472,8 @@ export class SystemScanner {
   private getPathTimestamps(targetPath: string): { createdAt: number; updatedAt: number } {
     try {
       const stats = fs.statSync(targetPath);
-      const birthTime = stats.birthtimeMs && stats.birthtimeMs > 0 ? stats.birthtimeMs : stats.ctimeMs;
+      const birthTime =
+        stats.birthtimeMs && stats.birthtimeMs > 0 ? stats.birthtimeMs : stats.ctimeMs;
       return {
         createdAt: Math.round(birthTime),
         updatedAt: Math.round(stats.mtimeMs || stats.ctimeMs || birthTime),
@@ -465,12 +484,20 @@ export class SystemScanner {
     }
   }
 
+  private resolveExecutable(command: string): string {
+    const lookup = this.isWindows ? `where.exe ${command}` : `which ${command}`;
+    return this.execute(lookup).split(/\r?\n/)[0].trim();
+  }
+
   /**
    * 执行系统命令
    */
   private execute(command: string): string {
     try {
-      return execSync(command, { encoding: 'utf-8' });
+      return execSync(command, {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
     } catch (error) {
       throw new Error(`Command failed: ${command}`);
     }
@@ -483,8 +510,9 @@ export class SystemScanner {
   private executeJsonCommand(command: string): string {
     try {
       return execSync(command, { encoding: 'utf-8' });
-    } catch (error: any) {
-      const stdout = error?.stdout?.toString?.() ?? '';
+    } catch (error) {
+      const commandError = error as Error & { stdout?: unknown };
+      const stdout = commandError.stdout !== undefined ? String(commandError.stdout) : '';
       if (stdout.trim()) {
         return stdout;
       }

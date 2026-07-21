@@ -4,12 +4,19 @@
  */
 
 import * as path from 'path';
+import { logger } from '../logger/logger';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 
 export interface ConflictIssue {
   id: string;
-  type: 'path-conflict' | 'version-conflict' | 'dependency-conflict' | 'permission-error' | 'mirror-error' | 'env-var-error';
+  type:
+    | 'path-conflict'
+    | 'version-conflict'
+    | 'dependency-conflict'
+    | 'permission-error'
+    | 'mirror-error'
+    | 'env-var-error';
   severity: 'critical' | 'warning' | 'info';
   title: string;
   description: string;
@@ -30,16 +37,12 @@ export interface ConflictDetectionResult {
 }
 
 export class ConflictDetector {
-  private log(level: string, message: string): void {
-    console.log(`[${level}] [ConflictDetector] ${message}`);
-  }
-
   private info(message: string): void {
-    this.log('INFO', message);
+    logger.info('ConflictDetector', message);
   }
 
   private error(message: string): void {
-    this.log('ERROR', message);
+    logger.error('ConflictDetector', message);
   }
 
   /**
@@ -94,7 +97,12 @@ export class ConflictDetector {
   /**
    * 获取系统信息
    */
-  private getSystemInfo() {
+  private getSystemInfo(): {
+    platform: string;
+    pathVariable: string;
+    pythonVersions: string[];
+    nodeVersions: string[];
+  } {
     const pathVariable = process.env.PATH || '';
     const pythonVersions = this.detectInstalledVersions('python');
     const nodeVersions = this.detectInstalledVersions('node');

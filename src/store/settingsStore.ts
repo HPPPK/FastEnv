@@ -4,92 +4,74 @@
  */
 
 import { create } from 'zustand';
-import { LogLevel } from '../types';
-import type { UserConfig, MirrorSource } from '../types';
+import type { AppSettings, MirrorSource } from '../types';
+
+export const createDefaultSettings = (): AppSettings => ({
+  theme: 'dark',
+  language: 'zh-CN',
+  autoBackup: true,
+  logLevel: 'info',
+  mirrorPython: 'https://mirrors.aliyun.com/pypi/simple/',
+  mirrorNpm: 'https://registry.npmmirror.com',
+});
 
 interface SettingsStoreState {
-  // 用户配置
-  config: UserConfig | null;
+  config: AppSettings | null;
   isLoading: boolean;
   error: string | null;
 
-  // 操作
-  setConfig: (config: UserConfig) => void;
-  updateConfig: (updates: Partial<UserConfig>) => void;
+  setConfig: (config: AppSettings) => void;
+  updateConfig: (updates: Partial<AppSettings>) => void;
   updateMirrorSource: (source: Partial<MirrorSource>) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  resetToDefault: () => void;
-  getConfig: () => UserConfig | null;
+  resetToDefault: () => AppSettings;
+  getConfig: () => AppSettings | null;
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
-  // 初始状态
   config: null,
   isLoading: false,
   error: null,
 
-  // 设置配置
-  setConfig: (config: UserConfig) => {
-    set({ config });
+  setConfig: (config: AppSettings): void => {
+    set({ config, error: null });
   },
 
-  // 更新配置
-  updateConfig: (updates: Partial<UserConfig>) => {
+  updateConfig: (updates: Partial<AppSettings>): void => {
     set((state) => ({
-      config: state.config ? { ...state.config, ...updates } : null,
+      config: state.config ? { ...state.config, ...updates, updatedAt: Date.now() } : null,
     }));
   },
 
-  // 更新镜像源
-  updateMirrorSource: (source: Partial<MirrorSource>) => {
+  updateMirrorSource: (source: Partial<MirrorSource>): void => {
     set((state) => ({
       config: state.config
         ? {
             ...state.config,
             mirrorSource: {
-              ...state.config.mirrorSource,
+              ...(state.config.mirrorSource ?? {}),
               ...source,
-            },
+            } as MirrorSource,
+            updatedAt: Date.now(),
           }
         : null,
     }));
   },
 
-  // 设置加载状态
-  setLoading: (loading: boolean) => {
+  setLoading: (loading: boolean): void => {
     set({ isLoading: loading });
   },
 
-  // 设置错误信息
-  setError: (error: string | null) => {
+  setError: (error: string | null): void => {
     set({ error });
   },
 
-  // 重置为默认配置
-  resetToDefault: () => {
-    set({
-      config: {
-        theme: 'dark',
-        language: 'zh-CN',
-        autoBackup: true,
-        autoRepairBeforeBackup: true,
-        logLevel: LogLevel.INFO,
-        defaultVirtualEnvPath: '',
-        enableScanPermission: true,
-        mirrorSource: {
-          python: 'https://mirrors.aliyun.com/pypi/simple/',
-          npm: 'https://registry.npmmirror.com',
-          maven: 'https://maven.aliyun.com/repository/public',
-          cargo: 'https://github.com/rust-lang/crates.io-index',
-          custom: {},
-        },
-      },
-    });
+  resetToDefault: (): AppSettings => {
+    const config = createDefaultSettings();
+    set({ config, error: null });
+    return config;
   },
 
-  // 获取配置
-  getConfig: () => {
-    return get().config;
-  },
+  getConfig: (): AppSettings | null => get().config,
 }));

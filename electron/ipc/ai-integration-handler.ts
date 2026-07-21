@@ -4,7 +4,7 @@
  */
 
 import { ipcMain } from 'electron';
-import { aiIntegrationService, type AIParseRequest, type AIParseResponse } from '../../service/ai-integration/ai-integration';
+import { aiIntegrationService, type AIParseRequest } from '../../service/ai-integration/ai-integration';
 import { logger } from '../../service/logger/logger';
 import type { IPCRequest, IPCResponse } from '../../src/types/ipc';
 

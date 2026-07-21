@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // 这是一个简单的测试，验证类型系统是否正常工作
 import type { Environment, Dependency, EnvironmentConflict } from './src/types';
 

@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import type { LogEntry, LogLevel } from '../../src/types';
+import type { LogEntry } from '../../src/types';
 
 /**
  * 日志管理器

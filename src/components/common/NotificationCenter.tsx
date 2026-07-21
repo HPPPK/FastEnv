@@ -10,7 +10,7 @@ import { AlertCircle, CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
 export default function NotificationCenter(): JSX.Element {
   const { notifications, removeNotification } = useUIStore();
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string): JSX.Element => {
     switch (type) {
       case 'success':
         return <CheckCircle size={20} className="text-green-500" />;
@@ -24,7 +24,7 @@ export default function NotificationCenter(): JSX.Element {
     }
   };
 
-  const getBgColor = (type: string) => {
+  const getBgColor = (type: string): string => {
     switch (type) {
       case 'success':
         return 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800';

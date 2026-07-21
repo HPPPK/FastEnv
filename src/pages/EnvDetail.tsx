@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Copy, Download, RefreshCw, AlertCircle, CheckCircle, Edit2, Save } from 'lucide-react';
+import {
+  ArrowLeft,
+  Copy,
+  Download,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  Edit2,
+  Save,
+} from 'lucide-react';
 import { useUIStore } from '../store/uiStore';
 import { useEnvStore } from '../store/envStore';
 import { envguardApi } from '../api/envguard';
@@ -17,9 +26,12 @@ interface EnvironmentInfo extends Environment {
 }
 
 export default function EnvDetail(): JSX.Element {
-  const { setCurrentPage, selectedEnvironment, setSelectedEnvironment, addNotification } = useUIStore();
+  const { setCurrentPage, selectedEnvironment, setSelectedEnvironment, addNotification } =
+    useUIStore();
   const { updateEnvironment } = useEnvStore();
-  const [activeTab, setActiveTab] = useState<'config' | 'dependencies' | 'tutorial' | 'history'>('config');
+  const [activeTab, setActiveTab] = useState<'config' | 'dependencies' | 'tutorial' | 'history'>(
+    'config'
+  );
   const [loading, setLoading] = useState(false);
   const [environment, setEnvironment] = useState<EnvironmentInfo | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +53,7 @@ export default function EnvDetail(): JSX.Element {
     }
   }, [selectedEnvironment]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     if (!environment) return;
 
     setRefreshing(true);
@@ -66,7 +78,7 @@ export default function EnvDetail(): JSX.Element {
     }
   };
 
-  const handleExportConfig = async () => {
+  const handleExportConfig = async (): Promise<void> => {
     if (!environment) return;
 
     try {
@@ -107,7 +119,7 @@ export default function EnvDetail(): JSX.Element {
     }
   };
 
-  const handleSaveProjectNote = async () => {
+  const handleSaveProjectNote = async (): Promise<void> => {
     if (!environment) return;
 
     setSavingNote(true);
@@ -302,20 +314,28 @@ export default function EnvDetail(): JSX.Element {
         {activeTab === 'dependencies' && (
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">已安装依赖 ({environment.dependencies.length})</h3>
+              <h3 className="text-lg font-semibold text-foreground">
+                已安装依赖 ({environment.dependencies.length})
+              </h3>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
-                <RefreshCw size={16} className={`inline mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  size={16}
+                  className={`inline mr-2 ${refreshing ? 'animate-spin' : ''}`}
+                />
                 {refreshing ? '统计中...' : '重新统计'}
               </button>
             </div>
             <div className="space-y-2">
               {environment.dependencies.length > 0 ? (
                 environment.dependencies.map((dep, idx) => (
-                  <div key={`${dep.name}-${idx}`} className="flex items-center justify-between rounded-lg bg-muted p-3">
+                  <div
+                    key={`${dep.name}-${idx}`}
+                    className="flex items-center justify-between rounded-lg bg-muted p-3"
+                  >
                     <span className="font-mono text-foreground">{dep.name}</span>
                     <span className="text-sm text-muted-foreground">{dep.version}</span>
                   </div>
@@ -346,9 +366,7 @@ export default function EnvDetail(): JSX.Element {
               <div>
                 <h4 className="mb-2 font-semibold text-foreground">2. 验证环境</h4>
                 <div className="rounded-lg bg-muted p-4">
-                  <code className="font-mono text-sm text-foreground">
-                    python --version
-                  </code>
+                  <code className="font-mono text-sm text-foreground">python --version</code>
                 </div>
               </div>
 
@@ -364,9 +382,7 @@ export default function EnvDetail(): JSX.Element {
               <div>
                 <h4 className="mb-2 font-semibold text-foreground">4. 退出环境</h4>
                 <div className="rounded-lg bg-muted p-4">
-                  <code className="font-mono text-sm text-foreground">
-                    deactivate
-                  </code>
+                  <code className="font-mono text-sm text-foreground">deactivate</code>
                 </div>
               </div>
             </div>

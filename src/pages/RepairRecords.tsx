@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Download, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface RepairRecord {
   id: string;
@@ -103,8 +103,13 @@ export default function RepairRecords(): JSX.Element {
     setFilteredRecords(filtered);
   }, [searchTerm, statusFilter, records]);
 
-  const getStatusConfig = (status: string) => {
-    const config: Record<string, { color: string; bg: string; label: string; icon: React.ReactNode }> = {
+  const getStatusConfig = (
+    status: string
+  ): { color: string; bg: string; label: string; icon: React.ReactNode } => {
+    const config: Record<
+      string,
+      { color: string; bg: string; label: string; icon: React.ReactNode }
+    > = {
       success: {
         color: 'text-green-500',
         bg: 'bg-green-50',
@@ -127,11 +132,11 @@ export default function RepairRecords(): JSX.Element {
     return config[status] || config.success;
   };
 
-  const handleDeleteRecord = (id: string) => {
+  const handleDeleteRecord = (id: string): void => {
     setRecords(records.filter((record) => record.id !== id));
   };
 
-  const handleExportRecords = () => {
+  const handleExportRecords = (): void => {
     const csv = [
       ['环境名称', '环境类型', '修复类型', '状态', '时间', '变更数'],
       ...filteredRecords.map((record) => [
@@ -189,7 +194,9 @@ export default function RepairRecords(): JSX.Element {
         <div className="flex gap-2">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as 'all' | 'success' | 'failed' | 'partial')
+            }
             className="rounded-lg border border-input bg-background px-4 py-2 text-foreground focus:border-primary focus:outline-none"
           >
             <option value="all">全部状态</option>
@@ -235,7 +242,9 @@ export default function RepairRecords(): JSX.Element {
                     <div className="mt-3 flex flex-wrap gap-4">
                       <div className="text-sm">
                         <span className="text-muted-foreground">环境类型: </span>
-                        <span className="font-mono text-foreground">{record.environmentType.toUpperCase()}</span>
+                        <span className="font-mono text-foreground">
+                          {record.environmentType.toUpperCase()}
+                        </span>
                       </div>
                       <div className="text-sm">
                         <span className="text-muted-foreground">时间: </span>

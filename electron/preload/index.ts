@@ -58,7 +58,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   /**
    * 监听来自主进程的消息
    */
-  on: (channel: string, listener: (event: any, data: unknown) => void) => {
+  on: (channel: string, listener: (_event: Electron.IpcRendererEvent, data: unknown) => void) => {
     const validChannels = [
       'ipc:response',
       'ipc:event',
@@ -80,7 +80,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   /**
    * 监听来自主进程的消息（仅一次）
    */
-  once: (channel: string, listener: (event: any, data: unknown) => void) => {
+  once: (channel: string, listener: (_event: Electron.IpcRendererEvent, data: unknown) => void) => {
     const validChannels = [
       'ipc:response',
       'ipc:event',
@@ -102,7 +102,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   /**
    * 移除事件监听
    */
-  removeListener: (channel: string, listener: (event: any, data: unknown) => void) => {
+  removeListener: (
+    channel: string,
+    listener: (_event: Electron.IpcRendererEvent, data: unknown) => void
+  ) => {
     ipcRenderer.removeListener(channel, listener);
   },
 
@@ -113,5 +116,3 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     ipcRenderer.removeAllListeners(channel);
   },
 });
-
-console.log('[Preload] IPC bridge initialized');

@@ -78,7 +78,7 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
   // 页面导航
   currentPage: 'home',
   previousPage: null,
-  setCurrentPage: (page: PageType) => {
+  setCurrentPage: (page: PageType): void => {
     set((state) => ({
       previousPage: state.currentPage,
       currentPage: page,
@@ -87,16 +87,16 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
 
   // 选中的环境
   selectedEnvironment: null,
-  setSelectedEnvironment: (env: Environment | null) => {
+  setSelectedEnvironment: (env: Environment | null): void => {
     set({ selectedEnvironment: env });
   },
 
   // 侧边栏
   sidebarOpen: true,
-  setSidebarOpen: (open: boolean) => {
+  setSidebarOpen: (open: boolean): void => {
     set({ sidebarOpen: open });
   },
-  toggleSidebar: () => {
+  toggleSidebar: (): void => {
     set((state) => ({
       sidebarOpen: !state.sidebarOpen,
     }));
@@ -104,7 +104,7 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
 
   // 主题
   theme: 'dark',
-  setTheme: (theme: 'light' | 'dark' | 'auto') => {
+  setTheme: (theme: 'light' | 'dark' | 'auto'): void => {
     set({ theme });
     // 应用主题到 DOM
     if (theme === 'dark') {
@@ -124,7 +124,7 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
 
   // 通知
   notifications: [],
-  addNotification: (notification: Omit<Notification, 'id'>) => {
+  addNotification: (notification: Omit<Notification, 'id'>): void => {
     const id = `notification-${Date.now()}-${Math.random()}`;
     const newNotification: Notification = {
       ...notification,
@@ -143,28 +143,28 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
       }, newNotification.duration);
     }
   },
-  removeNotification: (id: string) => {
+  removeNotification: (id: string): void => {
     set((state) => ({
       notifications: state.notifications.filter((n) => n.id !== id),
     }));
   },
-  clearNotifications: () => {
+  clearNotifications: (): void => {
     set({ notifications: [] });
   },
 
   // 模态框
   modals: {},
-  openModal: (name: string) => {
+  openModal: (name: string): void => {
     set((state) => ({
       modals: { ...state.modals, [name]: true },
     }));
   },
-  closeModal: (name: string) => {
+  closeModal: (name: string): void => {
     set((state) => ({
       modals: { ...state.modals, [name]: false },
     }));
   },
-  toggleModal: (name: string) => {
+  toggleModal: (name: string): void => {
     set((state) => ({
       modals: { ...state.modals, [name]: !state.modals[name] },
     }));
@@ -172,19 +172,19 @@ export const useUIStore = create<UIStoreState>((set, get) => ({
 
   // 搜索
   searchQuery: '',
-  setSearchQuery: (query: string) => {
+  setSearchQuery: (query: string): void => {
     set({ searchQuery: query });
   },
 
   // 加载状态
   isGlobalLoading: false,
-  setGlobalLoading: (loading: boolean) => {
+  setGlobalLoading: (loading: boolean): void => {
     set({ isGlobalLoading: loading });
   },
 
   // 刷新标志
   shouldRefresh: false,
-  setShouldRefresh: (refresh: boolean) => {
+  setShouldRefresh: (refresh: boolean): void => {
     set({ shouldRefresh: refresh });
   },
 }));

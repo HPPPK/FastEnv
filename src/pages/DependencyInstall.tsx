@@ -19,6 +19,7 @@ export const DependencyInstall: React.FC = () => {
   const [installStatus, setInstallStatus] = useState<'idle' | 'installing' | 'success' | 'error'>(
     'idle'
   );
+  const [operationId, setOperationId] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到日志底部
@@ -26,17 +27,38 @@ export const DependencyInstall: React.FC = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [installLogs]);
 
+  useEffect(() => {
+    return envguardApi.onDependencyInstallProgress((progress) => {
+      if (!operationId || progress.operationId !== operationId) return;
+
+      const level: InstallLog['level'] =
+        progress.status === 'failed' ? 'error' : progress.status === 'success' ? 'success' : 'info';
+      setInstallProgress(progress.progress);
+      setInstallLogs((logs) => [
+        ...logs,
+        {
+          timestamp: new Date().toLocaleTimeString('zh-CN'),
+          level,
+          message: progress.error ? `${progress.message}: ${progress.error}` : progress.message,
+        },
+      ]);
+      if (progress.status === 'failed') {
+        setInstallStatus('error');
+      }
+    });
+  }, [operationId]);
+
   // 获取当前选中的环境
   const currentEnv = environments.find((e) => e.id === selectedEnvId);
 
   // 添加日志
-  const addLog = (message: string, level: 'info' | 'warn' | 'error' | 'success' = 'info') => {
+  const addLog = (message: string, level: 'info' | 'warn' | 'error' | 'success' = 'info'): void => {
     const timestamp = new Date().toLocaleTimeString('zh-CN');
     setInstallLogs((prev) => [...prev, { timestamp, level, message }]);
   };
 
   // 开始安装
-  const handleInstall = async () => {
+  const handleInstall = async (): Promise<void> => {
     if (!selectedEnvId || !packageInput.trim()) {
       addLog('请选择环境并输入包名', 'error');
       return;
@@ -47,6 +69,8 @@ export const DependencyInstall: React.FC = () => {
       return;
     }
 
+    const currentOperationId = `dependency-install-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setOperationId(currentOperationId);
     setInstalling(true);
     setInstallStatus('installing');
     setInstallLogs([]);
@@ -66,7 +90,8 @@ export const DependencyInstall: React.FC = () => {
       const result = await envguardApi.installDependency(
         currentEnv.path,
         currentEnv.type,
-        packages
+        packages,
+        currentOperationId
       );
 
       if (result.success) {
@@ -85,7 +110,7 @@ export const DependencyInstall: React.FC = () => {
           }
         }, 1000);
       } else {
-        addLog(`安装失败: ${result.error || '未知错误'}`, 'error');
+        addLog(`安装失败: ${result.message || result.error || '未知错误'}`, 'error');
         setInstallStatus('error');
       }
     } catch (error) {
@@ -98,14 +123,14 @@ export const DependencyInstall: React.FC = () => {
   };
 
   // 清空日志
-  const handleClearLogs = () => {
+  const handleClearLogs = (): void => {
     setInstallLogs([]);
     setInstallProgress(0);
     setInstallStatus('idle');
   };
 
   // 获取日志颜色
-  const getLogColor = (level: string) => {
+  const getLogColor = (level: string): string => {
     switch (level) {
       case 'success':
         return 'text-green-600';

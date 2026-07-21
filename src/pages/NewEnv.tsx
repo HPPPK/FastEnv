@@ -39,6 +39,16 @@ export default function NewEnv(): JSX.Element {
   }, []);
 
   const handleFileInput = async (file: File): Promise<void> => {
+    if (activeTab === 'screenshot' && !file.type.startsWith('text/')) {
+      setRequirement('');
+      addNotification({
+        type: 'warning',
+        title: '截图 OCR 尚未接入',
+        message: '当前版本只能读取文本日志；请先粘贴 OCR 文本，图片识别将在后续版本接入。',
+      });
+      return;
+    }
+
     const content = await file.text();
     setRequirement(content);
   };
@@ -80,8 +90,16 @@ export default function NewEnv(): JSX.Element {
         new Set([
           ...(parsed.dependencies ?? []),
           ...(parsed.requiredDependencies ?? []),
-          ...(((recommendation as { suggestedDependencies?: string[]; dependencies?: string[] } | undefined)?.suggestedDependencies) ?? []),
-          ...(((recommendation as { suggestedDependencies?: string[]; dependencies?: string[] } | undefined)?.dependencies) ?? []),
+          ...((
+            recommendation as
+              | { suggestedDependencies?: string[]; dependencies?: string[] }
+              | undefined
+          )?.suggestedDependencies ?? []),
+          ...((
+            recommendation as
+              | { suggestedDependencies?: string[]; dependencies?: string[] }
+              | undefined
+          )?.dependencies ?? []),
         ])
       );
 
@@ -89,13 +107,14 @@ export default function NewEnv(): JSX.Element {
         addNotification({
           type: 'info',
           title: '已生成复用建议',
-          message: '复用旧环境的自动升级策略已解析，后续会接入安全变更预览。',
+          message: '已生成复用建议，但当前不会修改旧环境；安全升级预览仍待接入。',
         });
         return;
       }
 
       const environment = await envguardApi.createEnvironment({
-        name: envName.trim() || parsed.suggestedEnvironmentName || `${type}-${Date.now().toString(36)}`,
+        name:
+          envName.trim() || parsed.suggestedEnvironmentName || `${type}-${Date.now().toString(36)}`,
         type: String(type),
         version: String(version),
         tags: [String(type), 'managed'],
@@ -157,9 +176,7 @@ export default function NewEnv(): JSX.Element {
       {/* 页面标题 */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">新建开发环境</h1>
-        <p className="mt-2 text-muted-foreground">
-          通过智能需求解析快速创建隔离的开发环境
-        </p>
+        <p className="mt-2 text-muted-foreground">通过智能需求解析快速创建隔离的开发环境</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -167,9 +184,7 @@ export default function NewEnv(): JSX.Element {
         <div className="lg:col-span-2 space-y-6">
           {/* 环境名称 */}
           <div className="rounded-lg border border-border bg-card p-6">
-            <label className="block text-sm font-medium text-foreground">
-              环境名称
-            </label>
+            <label className="block text-sm font-medium text-foreground">环境名称</label>
             <input
               type="text"
               value={envName}
@@ -181,9 +196,7 @@ export default function NewEnv(): JSX.Element {
 
           {/* 需求输入方式选择 */}
           <div className="rounded-lg border border-border bg-card p-6">
-            <label className="block text-sm font-medium text-foreground mb-4">
-              需求录入方式
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-4">需求录入方式</label>
 
             <div className="flex gap-2 mb-6">
               <button
@@ -245,11 +258,9 @@ export default function NewEnv(): JSX.Element {
                     if (file) handleFileInput(file);
                   }}
                 />
-                <p className="text-sm text-muted-foreground">
-                  拖拽文件到此处或点击选择
-                </p>
+                <p className="text-sm text-muted-foreground">拖拽文件到此处或点击选择</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  支持 .txt, .md, .pdf, .docx 等格式
+                  当前支持 .txt, .md, .json, .log 文本文件；PDF/DOCX 解析待接入
                 </p>
               </div>
             )}
@@ -261,27 +272,21 @@ export default function NewEnv(): JSX.Element {
                 <input
                   type="file"
                   className="mx-auto mt-4 block max-w-xs text-sm"
-                  accept=".txt,.log,.png,.jpg,.jpeg"
+                  accept=".txt,.log"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file && file.type.startsWith('text')) handleFileInput(file);
+                    if (file) handleFileInput(file);
                   }}
                 />
-                <p className="text-sm text-muted-foreground">
-                  拖拽图片到此处或点击选择
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  支持 .jpg, .png, .gif 等格式
-                </p>
+                <p className="text-sm text-muted-foreground">拖拽图片到此处或点击选择</p>
+                <p className="mt-1 text-xs text-muted-foreground">支持 .jpg, .png, .gif 等格式</p>
               </div>
             )}
           </div>
 
           {/* 创建选项 */}
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-            <label className="block text-sm font-medium text-foreground">
-              创建方式
-            </label>
+            <label className="block text-sm font-medium text-foreground">创建方式</label>
             <div className="space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -291,9 +296,7 @@ export default function NewEnv(): JSX.Element {
                   onChange={() => setCreateMode('new')}
                   className="h-4 w-4"
                 />
-                <span className="text-sm text-foreground">
-                  创建新的独立虚拟环境（推荐）
-                </span>
+                <span className="text-sm text-foreground">创建新的独立虚拟环境（推荐）</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -304,7 +307,7 @@ export default function NewEnv(): JSX.Element {
                   className="h-4 w-4"
                 />
                 <span className="text-sm text-foreground">
-                  复用本机旧环境并自动升级优化
+                  仅分析复用建议（当前不会修改旧环境）
                 </span>
               </label>
             </div>
@@ -363,10 +366,13 @@ export default function NewEnv(): JSX.Element {
             <div className="rounded-lg border border-border bg-card p-6">
               <h3 className="font-semibold text-foreground">解析结果</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                场景：{analysis.scenario ?? '未识别'} · 置信度：{Math.round((analysis.confidence ?? 0) * 100)}%
+                场景：{analysis.scenario ?? '未识别'} · 置信度：
+                {Math.round((analysis.confidence ?? 0) * 100)}%
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                技术栈：{(analysis.detectedTypes ?? analysis.requiredLanguages ?? []).join(', ') || 'python'}
+                技术栈：
+                {(analysis.detectedTypes ?? analysis.requiredLanguages ?? []).join(', ') ||
+                  'python'}
               </p>
             </div>
           )}
@@ -377,7 +383,9 @@ export default function NewEnv(): JSX.Element {
           <h3 className="font-semibold text-foreground mb-4">本机已有环境</h3>
           <div className="space-y-3">
             {environments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">暂无扫描结果，请先返回首页刷新环境列表。</p>
+              <p className="text-sm text-muted-foreground">
+                暂无扫描结果，请先返回首页刷新环境列表。
+              </p>
             ) : (
               environments.slice(0, 8).map((env) => (
                 <div key={env.id} className="rounded-lg bg-muted p-3">

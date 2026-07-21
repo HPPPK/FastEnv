@@ -1,0 +1,8 @@
+allowBuilds:
+  electron: true
+  esbuild: true
+  tesseract.js: true
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - tesseract.js

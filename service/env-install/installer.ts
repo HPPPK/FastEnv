@@ -3,9 +3,7 @@
  * 在指定虚拟环境中安装、升级、卸载依赖包
  */
 
-import { execSync, spawn } from 'child_process';
-import * as path from 'path';
-import * as os from 'os';
+import { execSync } from 'child_process';
 import type { InstallParams, InstallResult, Dependency, PackageManager } from '../../src/types';
 import { logger } from '../logger/logger';
 
@@ -186,8 +184,6 @@ export class DependencyInstaller {
     packageName?: string,
     upgrade?: boolean
   ): string {
-    const platform = os.platform();
-
     switch (packageManager) {
       case 'pip':
         switch (action) {
