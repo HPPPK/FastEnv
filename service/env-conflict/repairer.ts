@@ -8,6 +8,15 @@ import * as path from 'path';
 import * as os from 'os';
 import type { EnvironmentConflict, RepairRecord, RepairStatus } from '../../src/types';
 import { logger } from '../logger/logger';
+import {
+  capturePlatformEnvironment,
+  readPersistentPath,
+  restorePersistentPath,
+  restoreProcessEnvironment,
+  updatePersistentPath,
+  type PersistentPathChange,
+  type PlatformEnvironmentSnapshot,
+} from './platform-backup';
 
 /**
  * 冲突修复器类
@@ -75,7 +84,8 @@ export class ConflictRepairer {
         }
       }
 
-      repairRecord.status = failureCount === 0 ? ('success' as RepairStatus) : ('partial' as RepairStatus);
+      repairRecord.status =
+        failureCount === 0 ? ('success' as RepairStatus) : ('partial' as RepairStatus);
       repairRecord.endTime = Date.now();
       repairRecord.duration = repairRecord.endTime - (repairRecord.startTime || 0);
       repairRecord.logs.push(
@@ -145,23 +155,39 @@ export class ConflictRepairer {
     record.logs.push('  → 正在清理重复的 PATH 条目...');
 
     try {
-      const pathEnv = process.env.PATH || '';
-      const pathArray = pathEnv.split(path.delimiter);
-      const uniquePaths = Array.from(new Set(pathArray));
+      const state = readPersistentPath();
+      const pathEnv =
+        state.value.includes('$PATH') || state.value.includes('%PATH%')
+          ? process.env.PATH || state.value
+          : state.value || process.env.PATH || '';
+      const pathArray = pathEnv.split(path.delimiter).filter(Boolean);
+      const seen = new Set<string>();
+      const uniquePaths = pathArray.filter((entry) => {
+        const key = process.platform === 'win32' ? entry.toLowerCase() : entry;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       if (uniquePaths.length < pathArray.length) {
+        const nextPath = uniquePaths.join(path.delimiter);
+        if (!record.backupPath) throw new Error('修复备份路径不存在');
+        updatePersistentPath(state, nextPath, record.backupPath);
+        process.env.PATH = nextPath;
         const removedCount = pathArray.length - uniquePaths.length;
         record.changes.push({
           type: 'modify',
           target: 'PATH',
-          description: `移除 ${removedCount} 个重复的 PATH 条目`,
+          description: '移除 ' + removedCount + ' 个重复的 PATH 条目',
         });
-        record.logs.push(`  ✓ 已移除 ${removedCount} 个重复 PATH 条目`);
+        record.logs.push('  ✓ 已移除 ' + removedCount + ' 个重复 PATH 条目');
       } else {
         record.logs.push('  ℹ 未发现重复的 PATH 条目');
       }
     } catch (error) {
-      throw new Error(`清理重复 PATH 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(
+        '清理重复 PATH 失败: ' + (error instanceof Error ? error.message : '未知错误')
+      );
     }
   }
 
@@ -175,16 +201,25 @@ export class ConflictRepairer {
     record.logs.push('  → 正在调整 PATH 优先级...');
 
     try {
-      // 获取当前 PATH
-      const pathEnv = process.env.PATH || '';
-      const pathArray = pathEnv.split(path.delimiter);
-
-      // 优先级调整逻辑：将虚拟环境路径移到前面
-      const venvPaths = pathArray.filter((p) => p.includes('venv') || p.includes('.venv'));
-      const otherPaths = pathArray.filter((p) => !p.includes('venv') && !p.includes('.venv'));
+      const state = readPersistentPath();
+      const pathEnv =
+        state.value.includes('$PATH') || state.value.includes('%PATH%')
+          ? process.env.PATH || state.value
+          : state.value || process.env.PATH || '';
+      const pathArray = pathEnv.split(path.delimiter).filter(Boolean);
+      const venvPaths = pathArray.filter(
+        (entry) => entry.includes('venv') || entry.includes('.venv')
+      );
+      const otherPaths = pathArray.filter(
+        (entry) => !entry.includes('venv') && !entry.includes('.venv')
+      );
       const reorderedPaths = [...venvPaths, ...otherPaths];
 
       if (JSON.stringify(pathArray) !== JSON.stringify(reorderedPaths)) {
+        const nextPath = reorderedPaths.join(path.delimiter);
+        if (!record.backupPath) throw new Error('修复备份路径不存在');
+        updatePersistentPath(state, nextPath, record.backupPath);
+        process.env.PATH = nextPath;
         record.changes.push({
           type: 'modify',
           target: 'PATH_PRIORITY',
@@ -195,7 +230,9 @@ export class ConflictRepairer {
         record.logs.push('  ℹ PATH 优先级已正确');
       }
     } catch (error) {
-      throw new Error(`调整 PATH 优先级失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(
+        '调整 PATH 优先级失败: ' + (error instanceof Error ? error.message : '未知错误')
+      );
     }
   }
 
@@ -277,11 +314,15 @@ export class ConflictRepairer {
     record.logs.push('  → 正在移除无效的 PATH 条目...');
 
     try {
-      const pathEnv = process.env.PATH || '';
-      const pathArray = pathEnv.split(path.delimiter);
-      const validPaths = pathArray.filter((p) => {
+      const state = readPersistentPath();
+      const pathEnv =
+        state.value.includes('$PATH') || state.value.includes('%PATH%')
+          ? process.env.PATH || state.value
+          : state.value || process.env.PATH || '';
+      const pathArray = pathEnv.split(path.delimiter).filter(Boolean);
+      const validPaths = pathArray.filter((entry) => {
         try {
-          return fs.existsSync(p);
+          return fs.existsSync(entry);
         } catch {
           return false;
         }
@@ -289,17 +330,23 @@ export class ConflictRepairer {
 
       const removedCount = pathArray.length - validPaths.length;
       if (removedCount > 0) {
+        const nextPath = validPaths.join(path.delimiter);
+        if (!record.backupPath) throw new Error('修复备份路径不存在');
+        updatePersistentPath(state, nextPath, record.backupPath);
+        process.env.PATH = nextPath;
         record.changes.push({
           type: 'remove',
-          target: 'INVALID_PATHS',
-          description: `移除 ${removedCount} 个无效的 PATH 条目`,
+          target: 'PATH',
+          description: '移除 ' + removedCount + ' 个无效的 PATH 条目',
         });
-        record.logs.push(`  ✓ 已移除 ${removedCount} 个无效 PATH 条目`);
+        record.logs.push('  ✓ 已移除 ' + removedCount + ' 个无效 PATH 条目');
       } else {
         record.logs.push('  ℹ 所有 PATH 条目都有效');
       }
     } catch (error) {
-      throw new Error(`移除无效 PATH 失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      throw new Error(
+        '移除无效 PATH 失败: ' + (error instanceof Error ? error.message : '未知错误')
+      );
     }
   }
 
@@ -355,18 +402,30 @@ export class ConflictRepairer {
     try {
       fs.mkdirSync(backupPath, { recursive: true });
 
-      // 备份 PATH 环境变量
-      const pathBackup = {
-        PATH: process.env.PATH || '',
-        timestamp: new Date().toISOString(),
-      };
-      fs.writeFileSync(path.join(backupPath, 'path.json'), JSON.stringify(pathBackup, null, 2));
+      const snapshot = capturePlatformEnvironment();
+      fs.writeFileSync(
+        path.join(backupPath, 'environment.json'),
+        JSON.stringify(snapshot, null, 2)
+      );
 
-      // 备份其他环境变量
-      const envBackup = { ...process.env };
-      fs.writeFileSync(path.join(backupPath, 'env.json'), JSON.stringify(envBackup, null, 2));
+      // 保留旧格式文件，便于兼容已存在的备份。
+      fs.writeFileSync(
+        path.join(backupPath, 'path.json'),
+        JSON.stringify(
+          { PATH: snapshot.processEnv.PATH ?? '', timestamp: snapshot.capturedAt },
+          null,
+          2
+        )
+      );
+      fs.writeFileSync(
+        path.join(backupPath, 'env.json'),
+        JSON.stringify(snapshot.processEnv, null, 2)
+      );
 
-      logger.info('ConflictRepairer', `配置已备份到: ${backupPath}`);
+      logger.info('ConflictRepairer', `配置已备份到: ${backupPath}`, {
+        platform: snapshot.platform,
+        capturedSources: snapshot.sources.filter((source) => source.exists).length,
+      });
       return backupPath;
     } catch (error) {
       throw new Error(`备份配置失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -383,14 +442,43 @@ export class ConflictRepairer {
     }
 
     try {
+      const environmentBackupFile = path.join(repairRecord.backupPath, 'environment.json');
       const pathBackupFile = path.join(repairRecord.backupPath, 'path.json');
+      const persistentChangesFile = path.join(
+        repairRecord.backupPath,
+        'persistent-path-changes.json'
+      );
 
-      if (!fs.existsSync(pathBackupFile)) {
-        throw new Error('备份文件不存在');
+      if (fs.existsSync(environmentBackupFile)) {
+        const snapshot = JSON.parse(
+          fs.readFileSync(environmentBackupFile, 'utf-8')
+        ) as PlatformEnvironmentSnapshot;
+        if (!snapshot.processEnv || !snapshot.platform || !Array.isArray(snapshot.sources)) {
+          throw new Error('跨平台环境备份格式无效');
+        }
+        restoreProcessEnvironment(snapshot);
       }
 
-      const pathBackup = JSON.parse(fs.readFileSync(pathBackupFile, 'utf-8'));
-      process.env.PATH = pathBackup.PATH;
+      if (fs.existsSync(persistentChangesFile)) {
+        const changes = JSON.parse(
+          fs.readFileSync(persistentChangesFile, 'utf-8')
+        ) as PersistentPathChange[];
+        for (const change of [...changes].reverse()) {
+          restorePersistentPath(change);
+        }
+      } else {
+        // 兼容旧版只备份 PATH 的记录。
+        if (!fs.existsSync(pathBackupFile)) {
+          throw new Error('备份文件不存在');
+        }
+        const pathBackup = JSON.parse(fs.readFileSync(pathBackupFile, 'utf-8')) as {
+          PATH?: string;
+        };
+        if (typeof pathBackup.PATH !== 'string') {
+          throw new Error('旧版 PATH 备份格式无效');
+        }
+        process.env.PATH = pathBackup.PATH;
+      }
 
       logger.info('ConflictRepairer', `已从备份恢复: ${repairRecord.backupPath}`);
       return true;

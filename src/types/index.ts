@@ -222,6 +222,46 @@ export interface EnvironmentConflict {
   resolutionSteps?: string[];
 }
 
+export interface EnvironmentPermissionStatus {
+  platform: NodeJS.Platform;
+  isElevated: boolean;
+  userPath: {
+    writable: boolean;
+    target: string;
+    message: string;
+  };
+  systemPath: {
+    writable: boolean;
+    target: string;
+    requiresElevation: boolean;
+    message: string;
+  };
+}
+
+export interface ElevationRequestResult {
+  platform: NodeJS.Platform;
+  success: boolean;
+  requiresRestart: boolean;
+  message: string;
+}
+
+export interface ElevatedSystemPathResult {
+  version: number;
+  operation: 'write-system-path';
+  requestId: string;
+  platform: string;
+  success: boolean;
+  changed: boolean;
+  rolledBack: boolean;
+  cancelled?: boolean;
+  target: string;
+  message: string;
+  backupPath?: string;
+  previousValue?: string;
+  nextValue?: string;
+  errorCode?: string;
+}
+
 /**
  * 修复记录
  */

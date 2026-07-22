@@ -27,7 +27,7 @@ export function createWindow(): BrowserWindow {
 
   // 加载应用
   const startUrl = isDev
-    ? 'http://localhost:5173'
+    ? (process.env.VITE_DEV_SERVER_URL ?? 'http://localhost:5173')
     : `file://${path.join(__dirname, '../../renderer/index.html')}`;
 
   mainWindow.loadURL(startUrl);

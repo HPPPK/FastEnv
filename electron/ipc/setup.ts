@@ -12,6 +12,11 @@ import { systemScanner } from '../../service/env-scan/system-scanner';
 import { demandParser } from '../../service/demand-parse/parser';
 import { conflictDetector } from '../../service/env-conflict/detector';
 import { conflictRepairer } from '../../service/env-conflict/repairer';
+import { getEnvironmentPermissionStatus } from '../../service/env-conflict/permissions';
+import {
+  requestEnvironmentElevation,
+  writeSystemPathWithElevation,
+} from '../../service/env-conflict/elevation';
 import { environmentCreator } from '../../service/env-create/creator';
 import { persistenceManager } from '../../service/storage/persistence';
 import { registerAIIntegrationHandlers } from './ai-integration-handler';
@@ -114,6 +119,23 @@ async function handleIPCRequest(
   switch (channel) {
     case 'system:scan':
       return filterDeletedScanResult(await systemScanner.scan());
+
+    case 'system:permissions':
+      return getEnvironmentPermissionStatus();
+
+    case 'system:elevation-request':
+      return requestEnvironmentElevation();
+
+    case 'system:write-path-elevated': {
+      const payload = data as { pathEntries?: unknown };
+      if (
+        !Array.isArray(payload?.pathEntries) ||
+        payload.pathEntries.some((entry) => typeof entry !== 'string')
+      ) {
+        throw new Error('系统级 PATH 写入请求无效');
+      }
+      return writeSystemPathWithElevation(payload.pathEntries);
+    }
 
     case 'env:list':
       return {

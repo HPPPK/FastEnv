@@ -10,6 +10,10 @@
     "rootDir": ".",
     "skipLibCheck": true
   },
-  "include": ["electron/**/*"],
+  "include": [
+    "electron/**/*",
+    "service/env-conflict/elevation-helper.ts",
+    "service/env-conflict/elevation-protocol.ts"
+  ],
   "exclude": ["node_modules", "dist", "src"]
 }

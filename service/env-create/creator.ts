@@ -231,7 +231,7 @@ export class EnvironmentCreator {
     switch (type) {
       case 'python': {
         const pythonExe = this.isWindows
-          ? path.join(envDir, 'python.exe')
+          ? path.join(envDir, 'Scripts', 'python.exe')
           : path.join(envDir, 'bin', 'python');
         for (let index = 0; index < dependencies.length; index += 1) {
           const dependency = dependencies[index];

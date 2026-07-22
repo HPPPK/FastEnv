@@ -100,15 +100,25 @@ export const DependencyInstall: React.FC = () => {
         setInstallStatus('success');
         setPackageInput('');
 
-        // 刷新环境信息
-        setTimeout(async () => {
-          try {
-            const environments = await envguardApi.listEnvironments();
-            useEnvStore.setState({ environments });
-          } catch (error) {
-            console.error('Failed to refresh environments:', error);
-          }
-        }, 1000);
+        // 安装完成后立即重新扫描并持久化当前环境的依赖列表，避免详情页继续显示旧缓存。
+        try {
+          const dependencies = await envguardApi.getInstalledPackages(
+            currentEnv.path,
+            currentEnv.type
+          );
+          const updatedEnvironment = await envguardApi.updateEnvironment(currentEnv.id, {
+            dependencies,
+          });
+          useEnvStore.getState().updateEnvironment(currentEnv.id, {
+            dependencies: updatedEnvironment.dependencies,
+            updatedAt: updatedEnvironment.updatedAt,
+          });
+          addLog('依赖列表已刷新，共 ' + dependencies.length + ' 个依赖', 'info');
+        } catch (refreshError) {
+          const refreshMessage =
+            refreshError instanceof Error ? refreshError.message : '未知刷新错误';
+          addLog('安装已成功，但依赖列表刷新失败：' + refreshMessage, 'warn');
+        }
       } else {
         addLog(`安装失败: ${result.message || result.error || '未知错误'}`, 'error');
         setInstallStatus('error');

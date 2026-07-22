@@ -6,6 +6,9 @@ import type {
   SystemScanResult,
   Dependency,
   AppSettings,
+  EnvironmentPermissionStatus,
+  ElevationRequestResult,
+  ElevatedSystemPathResult,
 } from '../types';
 import { ipcClient } from '../utils/ipc-client';
 
@@ -44,6 +47,22 @@ export interface CreateEnvironmentProgress {
 export const envguardApi = {
   async scanSystem(): Promise<SystemScanResult> {
     return ipcClient.invoke<SystemScanResult>('system:scan');
+  },
+
+  async getEnvironmentPermissionStatus(): Promise<EnvironmentPermissionStatus> {
+    return ipcClient.invoke<EnvironmentPermissionStatus>('system:permissions');
+  },
+
+  async requestEnvironmentElevation(): Promise<ElevationRequestResult> {
+    return ipcClient.invoke<ElevationRequestResult>('system:elevation-request', undefined, 120000);
+  },
+
+  async writeSystemPathWithElevation(pathEntries: string[]): Promise<ElevatedSystemPathResult> {
+    return ipcClient.invoke<ElevatedSystemPathResult>(
+      'system:write-path-elevated',
+      { pathEntries },
+      120000
+    );
   },
 
   async listEnvironments(): Promise<Environment[]> {

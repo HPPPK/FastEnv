@@ -1,6 +1,6 @@
 # EnvGuard - 企业级开发环境管理平台
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.1.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -42,7 +42,7 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - **打包工具**: electron-builder
 - **包管理**: npm/pnpm
 
-## 📌 当前开发状态（2026-07-21）
+## 📌 当前开发状态（2026-07-22）
 
 当前版本是一个已经完成基础业务闭环、但仍在向企业级 MVP 演进的 Electron 应用。重点不是继续堆叠页面，而是把已有 UI、IPC 和主进程服务稳定地连接起来。
 
@@ -68,24 +68,35 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - Windows Python 启动器解析已修复：环境创建服务在 Windows 使用 `where.exe` 查找 Python，并过滤 `WindowsApps` 占位路径，避免真实创建流程误判 Python 不可用。
 - 已完成一次真实 Windows UI 端到端验收：通过 UI 创建隔离 Python 3.14.6 环境 `e2e-ui-python-20260721`，在安装依赖页面实际安装 `colorama`，UI 日志显示安装成功，隔离环境内实测版本为 `colorama 0.4.6`。
 - 端到端验收后的依赖重新统计显示 `colorama 0.4.6` 与 `pip 26.1.2`；随后已通过 UI 删除测试环境，环境数量恢复为 2 个，测试目录已清理，5173 开发端口已释放。
+- 安装成功后的依赖刷新已改为立即调用目标环境扫描，并通过 `env:update` 持久化最新依赖，再同步 Zustand 状态；刷新失败会在安装日志中明确提示，不再依赖固定 1 秒延时。
+- 已补充创建环境附带依赖的回归测试：真实创建隔离 Python venv，并验证 `colorama==0.4.6` 安装在 Windows `Scripts\python.exe` 对应环境中。
+- 冲突修复页面已强化为“方案预览 + 二次确认”：一键修复按钮不再直接修改系统；预览中会区分可自动修复和仅提供建议的冲突，确认后才执行修复，完成后立即重新扫描。
+- 冲突修复备份已增加跨平台环境快照与 PATH 事务基础层：Windows 记录用户/系统注册表环境来源并只写入当前用户 PATH，macOS/Linux 通过受控的 EnvGuard 标记块写入用户 Shell profile；回滚会恢复持久化 PATH 和当前进程环境，并兼容旧版 PATH 备份格式。
+- 冲突修复前已增加只读权限预检：Windows 区分当前用户 PATH 与 HKLM 系统 PATH，macOS/Linux 检查用户 Shell profile 可写性；当前不会自动请求管理员/root 提权。
+- 已增加用户明确触发的跨平台提权验证：Windows 使用 UAC、macOS 使用管理员授权对话框、Linux 使用 polkit；验证命令是无副作用的 no-op，不会直接修改系统配置，真正系统级写入仍需由一次性受控助手完成。
+- 已实现一次性系统级 PATH 提权助手：UI 需要二次确认后才提交固定的 `write-system-path` JSON 请求；助手校验请求字段、平台、PATH 条目和 SHA-256 完整性，只允许写入固定的 Windows HKLM PATH、macOS `/etc/paths.d/envguard` 或 Linux `/etc/profile.d/envguard.sh`，写入后校验，失败时自动回滚。
+- 已完成一次真实 Windows 系统级 PATH 写入验证：使用当前 HKLM PATH 已存在的第一项，通过一次性 PowerShell UAC 助手完成管理员级写入，返回 `success: true`，写入前后 PATH 长度均为 308，完整字符串一致，因此没有改变用户当前系统配置。
+- 已完成一次真实 Windows UI 端到端验证：在隔离 Vite 5174 + Electron CDP 会话中进入“冲突修复”，输入 `C:\Python314\Scripts\`、勾选二次确认并点击“确认写入系统级 PATH”；页面显示成功，备份中的写入前 PATH 与当前 HKLM PATH 完全一致，且 UI IPC 未发生 120 秒阻塞超时。
+- Windows x64 打包产物已验证包含 NSIS 安装器、便携版和 `resources/elevation-helper.ps1` / 解包后的 Node 提权协议文件。
 
 ### 仍在开发中
 
 - 图片 OCR、PDF/DOCX 解析尚未接入；当前新建环境支持文本和文本类文件，截图页仅接受 OCR 后的文本日志。
 - “复用旧环境”目前只生成分析建议，不会自动修改或升级旧环境。
-- 冲突修复仍需要继续强化平台级备份、权限提示和可验证回滚。
+- 冲突修复的 UI 预览、二次确认、用户级 PATH 写入、只读权限预检、一次性系统级 PATH 助手和跨平台回滚基础已完成；仍需在真实 macOS/Linux 机器或 CI 上验证授权取消、polkit/AppleScript 行为，并继续扩展其他变量类型。
 - 日志查看器、日志导出、配置导入导出尚未完成完整 IPC 链路。
 - 仍需补充正式的自动化测试框架和 CI 测试；当前已提供本地可重复的隔离安装、需求解析和冲突检测验收脚本。
-- Windows x64 Electron 安装器与便携版已发布到 v0.1.0 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
-- 依赖安装成功后，详情页首次可能仍显示缓存的依赖清单；执行“重新统计依赖”后可显示最新包信息。自动刷新链路仍应继续强化。
+- Windows x64 Electron 安装器与便携版已发布到 v0.1.1 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
+- Windows 系统级 PATH 已在当前机器完成一次真实 UAC 验证；macOS/Linux 仍仅完成代码路径和隔离协议验证，未声称有对应实机写入证据。
+- 依赖安装的取消、权限失败、网络失败和跨平台回滚语义仍需继续强化；当前成功后的依赖刷新与创建环境附带依赖已完成真实 Windows 回归验证。
 
 ### 推荐开发顺序
 
-1. 完成真实环境创建和依赖安装的异常、取消、验证流程。
-2. 接入 OCR/文档解析和文件选择 IPC。
-3. 为系统冲突修复增加预览、二次确认、备份和回滚验证。
-4. 补齐日志、配置导入导出和权限处理。
-5. 增加自动化测试，再进行 Windows/macOS/Linux 打包验收。
+1. 在真实 macOS/Linux 机器或 CI 上验证一次性提权助手的授权取消、polkit/AppleScript、写入和回滚。
+2. 补齐真实环境创建和依赖安装的异常、取消、权限提示与回滚验证。
+3. 接入 OCR/文档解析和文件选择 IPC。
+4. 为系统冲突修复扩展其他变量类型、持久化配置回放和回滚验证。
+5. 补齐日志、配置导入导出，再进行 Windows/macOS/Linux 正式发布验收。
 
 `AGENTS.md` 是开发交接说明；若其中的状态描述与实际源码不一致，以实际源码和本节的验证结果为准。
 
@@ -100,17 +111,19 @@ node scripts/run-install-cases.cjs
 
 本次在 Windows（Node.js 24.18.0、Python 3.14.6、npm 11.16.0）实际执行，结果如下：
 
-| 类别             | 案例                                                         | 实际结果                                                              |
-| ---------------- | ------------------------------------------------------------ | --------------------------------------------------------------------- |
-| 模拟真实需求     | Python 3.12 + Django Web API，requests、pytest               | 解析成功：识别 Python、3.12、Django/requests/pytest                   |
-| 模拟真实需求     | Node.js 20 + React/TypeScript/Vite，axios                    | 解析成功：识别 Node、20、React/TypeScript/Vite/axios                  |
-| 模拟真实需求     | Java 17 + Spring Boot REST API，Maven/MySQL/JUnit            | 解析成功：识别 Java、17、Spring Boot/Maven/MySQL/JUnit                |
-| 模拟真实需求     | Python 3.12 FastAPI 后端 + Node.js 20 React 前端             | 解析成功：识别 Python + Node、两个版本和核心依赖                      |
-| 真实成功安装     | 隔离 Python venv 安装 `colorama==0.4.6`                      | 成功；pip 安装结果和包扫描均验证通过                                  |
-| 真实成功安装     | 隔离 Node 项目安装 `is-number@7.0.0`                         | 成功；npm 安装结果、`node_modules` 和包扫描均验证通过                 |
-| 真实 Python 冲突 | 同一次 pip 命令请求 `requests==2.28.0` 与 `requests==2.31.0` | 按预期失败，返回 `ResolutionImpossible`                               |
-| 真实 Node 冲突   | 同一次 npm 命令请求 `react@17.0.2` 与 `react-dom@18.2.0`     | 按预期失败，返回 `ERESOLVE`，因为 react-dom 要求 peer react `^18.2.0` |
-| 项目冲突检测模拟 | 两个 Python 版本、同环境两个 numpy 版本、重复 PATH           | 检测到 `duplicate_path`、`version_mismatch`、`dependency_conflict`    |
+| 类别             | 案例                                                           | 实际结果                                                              |
+| ---------------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 模拟真实需求     | Python 3.12 + Django Web API，requests、pytest                 | 解析成功：识别 Python、3.12、Django/requests/pytest                   |
+| 模拟真实需求     | Node.js 20 + React/TypeScript/Vite，axios                      | 解析成功：识别 Node、20、React/TypeScript/Vite/axios                  |
+| 模拟真实需求     | Java 17 + Spring Boot REST API，Maven/MySQL/JUnit              | 解析成功：识别 Java、17、Spring Boot/Maven/MySQL/JUnit                |
+| 模拟真实需求     | Python 3.12 FastAPI 后端 + Node.js 20 React 前端               | 解析成功：识别 Python + Node、两个版本和核心依赖                      |
+| 真实成功安装     | 隔离 Python venv 安装 `colorama==0.4.6`                        | 成功；pip 安装结果和包扫描均验证通过                                  |
+| 创建并安装回归   | `EnvironmentCreator` 创建 Python venv 并附带 `colorama==0.4.6` | 成功；验证 Windows `Scripts\python.exe` 路径、返回依赖和实际包版本    |
+| 跨平台备份覆盖   | Windows 注册表来源 + macOS zsh/bash profile 目标               | 通过；快照目标、受控 profile 写入和事务回滚均验证通过                 |
+| 真实成功安装     | 隔离 Node 项目安装 `is-number@7.0.0`                           | 成功；npm 安装结果、`node_modules` 和包扫描均验证通过                 |
+| 真实 Python 冲突 | 同一次 pip 命令请求 `requests==2.28.0` 与 `requests==2.31.0`   | 按预期失败，返回 `ResolutionImpossible`                               |
+| 真实 Node 冲突   | 同一次 npm 命令请求 `react@17.0.2` 与 `react-dom@18.2.0`       | 按预期失败，返回 `ERESOLVE`，因为 react-dom 要求 peer react `^18.2.0` |
+| 项目冲突检测模拟 | 两个 Python 版本、同环境两个 numpy 版本、重复 PATH             | 检测到 `duplicate_path`、`version_mismatch`、`dependency_conflict`    |
 
 真实冲突的关键输出：
 
@@ -126,6 +139,22 @@ node scripts/run-install-cases.cjs
 ```
 
 测试目录是临时目录，可在确认不再需要报告后删除；不要把测试依赖安装到系统 Python 或全局 npm。
+
+### 提权助手隔离测试
+
+```powershell
+pnpm run test:elevation
+```
+
+该测试只验证严格 JSON 白名单、绝对路径约束、shell 字符拒绝、平台不匹配和 SHA-256 请求篡改检测；它不会请求 UAC、修改 HKLM、写入 macOS `/etc` 或 Linux `/etc`。Windows 当前实机已验证编译产物中的助手文件会被 electron-builder 解包到 `resources/app.asar.unpacked/dist/service/env-conflict/`。macOS/Linux 的真实授权取消、polkit 和 AppleScript 行为仍需对应系统或 CI 验证。
+
+如需在 Windows 上重复真实写入验证（会弹出 UAC），使用：
+
+```powershell
+node scripts/run-real-system-path-write.cjs
+```
+
+该脚本只提交当前 HKLM PATH 已存在的第一项，并断言写入前后完整 PATH 一致；不要将其改成任意目录后在生产机器上运行。
 
 ## 📁 项目结构
 
@@ -219,14 +248,17 @@ pnpm run pack
 
 # 生成发布包并执行 electron-builder
 pnpm run dist
+
+# 隔离验证提权协议、篡改检测和白名单边界（不会写入真实系统 PATH）
+pnpm run test:elevation
 ```
 
 ## 📦 下载并安装已发布版本
 
-Windows x64 用户可以直接从 [EnvGuard v0.1.0 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.0) 下载：
+Windows x64 用户可以直接从 [EnvGuard v0.1.1 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.1) 下载：
 
-- `EnvGuard.Setup.0.1.0.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
-- `EnvGuard.0.1.0.exe`：便携版，无需安装，直接运行即可。
+- `EnvGuard.Setup.0.1.1.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
+- `EnvGuard.0.1.1.exe`：便携版，无需安装，直接运行即可。
 
 当前安装包未配置代码签名证书，Windows 首次运行时可能显示 SmartScreen 或未知发布者提示；请确认文件来自上述 GitHub Release 后再继续。当前 Release 已包含 NSIS 安装器、便携版、blockmap 和 `latest.yml` 资产。
 
@@ -250,8 +282,8 @@ Windows x64 用户可以直接从 [EnvGuard v0.1.0 Release](https://github.com/H
 1. 进入"冲突修复"页面
 2. 点击"扫描冲突"检测系统问题
 3. 查看冲突详情和修复建议
-4. 点击"一键修复"自动处理所有冲突
-5. 修复完成后可查看修复报告
+4. 查看修复方案并勾选二次确认后，再点击"确认修复"；需要系统级 PATH 时，在权限区域输入目录、再次确认后才会弹出管理员授权
+5. 修复完成后可查看修复报告；系统级写入会生成独立备份目录，用户取消授权不会修改配置
 
 ### 管理依赖
 
@@ -324,6 +356,9 @@ await envguardApi.detectConflicts() -> { conflicts, summary }
 
 // 修复冲突
 await envguardApi.fixConflicts() -> { repairRecord, success }
+
+// 由一次性白名单助手写入系统级 PATH（需要用户二次确认）
+await envguardApi.writeSystemPathWithElevation([pathEntry]) -> ElevatedSystemPathResult
 
 // 获取和保存设置
 await envguardApi.getConfig()

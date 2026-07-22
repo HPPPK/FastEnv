@@ -4,6 +4,14 @@ const { spawnSync, execFileSync } = require('child_process');
 const { EnvironmentInstaller } = require('../dist/service/env-install/env-installer.js');
 const { DemandParser } = require('../dist/service/demand-parse/parser.js');
 const { ConflictDetector } = require('../dist/service/env-conflict/detector.js');
+const { EnvironmentCreator } = require('../dist/service/env-create/creator.js');
+const {
+  capturePlatformEnvironment,
+  getPlatformEnvironmentTargets,
+  restorePersistentPath,
+  updatePersistentPath,
+} = require('../dist/service/env-conflict/platform-backup.js');
+const { getEnvironmentPermissionStatus } = require('../dist/service/env-conflict/permissions.js');
 
 const projectRoot = path.resolve(__dirname, '..');
 const tempRoot = path.join(projectRoot, '.tmp-test', 'install-cases');
@@ -62,6 +70,55 @@ async function main() {
       .find(Boolean) || 'npm.cmd';
 
   const parser = new DemandParser();
+
+  const darwinTargets = getPlatformEnvironmentTargets('darwin');
+  const platformSnapshot = capturePlatformEnvironment();
+  const macosProfileCoverage = [
+    '.zshenv',
+    '.zprofile',
+    '.zshrc',
+    '.bash_profile',
+    '.bashrc',
+    '.profile',
+  ].every((profile) => darwinTargets.some((target) => target.target.endsWith(profile)));
+  assert(macosProfileCoverage, 'macOS shell profile coverage is incomplete');
+  report.platformBackup = {
+    currentPlatform: platformSnapshot.platform,
+    capturedSourceCount: platformSnapshot.sources.filter((source) => source.exists).length,
+    macosTargets: darwinTargets.map((target) => target.target),
+    verified: macosProfileCoverage && typeof platformSnapshot.processEnv === 'object',
+  };
+
+  const permissionStatus = getEnvironmentPermissionStatus();
+  report.permissionPreflight = {
+    platform: permissionStatus.platform,
+    isElevated: permissionStatus.isElevated,
+    userPathWritable: permissionStatus.userPath.writable,
+    systemPathWritable: permissionStatus.systemPath.writable,
+    verified:
+      typeof permissionStatus.userPath.target === 'string' &&
+      permissionStatus.systemPath.requiresElevation,
+  };
+
+  const shellProfileFixture = path.join(tempRoot, 'macos-shell-profile.fixture');
+  const shellProfileChange = updatePersistentPath(
+    {
+      kind: 'shell-profile',
+      target: shellProfileFixture,
+      exists: false,
+      value: '',
+    },
+    '/usr/local/bin:/usr/bin',
+    tempRoot
+  );
+  const fixtureWritten = fs
+    .readFileSync(shellProfileFixture, 'utf8')
+    .includes('EnvGuard managed PATH');
+  restorePersistentPath(shellProfileChange);
+  const fixtureRestored = !fs.existsSync(shellProfileFixture);
+  assert(fixtureWritten && fixtureRestored, 'Shell profile transaction rollback failed');
+  report.platformBackup.transactionVerified = fixtureWritten && fixtureRestored;
+
   const demandCases = [
     {
       name: 'Python Django Web API',
@@ -111,6 +168,51 @@ async function main() {
       pythonInstall.success &&
       pythonInstalled.some((pkg) => pkg.toLowerCase().startsWith('colorama==')),
     installedPackages: pythonInstalled.filter((pkg) => pkg.toLowerCase().startsWith('colorama==')),
+  });
+
+  const creator = new EnvironmentCreator();
+  const createdDependencyEnv = path.join(tempRoot, 'python-create-with-dependency');
+  const createProgress = [];
+  const createdEnvironment = await creator.createEnvironment(
+    'fastenv-create-with-dependency',
+    'python',
+    'latest',
+    createdDependencyEnv,
+    ['colorama==0.4.6'],
+    {
+      operationId: 'create-with-dependency-regression',
+      onProgress: (event) => createProgress.push(event),
+    }
+  );
+  const createdPythonPath = path.join(createdDependencyEnv, 'Scripts', 'python.exe');
+  const createdDependencyPackages = await installer.getInstalledPackages(
+    createdDependencyEnv,
+    'python'
+  );
+  const createdDependencyVerified =
+    createdEnvironment.dependencies.some(
+      (dependency) => dependency.name.toLowerCase() === 'colorama' && dependency.version === '0.4.6'
+    ) &&
+    createdDependencyPackages.some((pkg) => pkg.toLowerCase() === 'colorama==0.4.6') &&
+    fs.existsSync(createdPythonPath);
+  assert(
+    createdDependencyVerified,
+    'EnvironmentCreator did not install colorama into the Windows venv Scripts path'
+  );
+  report.cases.push({
+    name: '创建 Python 环境并附带安装依赖',
+    environmentPath: createdDependencyEnv,
+    command: 'EnvironmentCreator.createEnvironment(..., [colorama==0.4.6])',
+    result: {
+      success: true,
+      environment: createdEnvironment,
+    },
+    progress: createProgress,
+    verified: createdDependencyVerified,
+    pythonPath: createdPythonPath,
+    installedPackages: createdDependencyPackages.filter((pkg) =>
+      pkg.toLowerCase().startsWith('colorama==')
+    ),
   });
 
   const nodeEnv = path.join(tempRoot, 'node-success');
@@ -256,6 +358,8 @@ async function main() {
           exitCode: item.exitCode,
         })),
         syntheticConflictDetection: report.syntheticConflictDetection,
+        platformBackup: report.platformBackup,
+        permissionPreflight: report.permissionPreflight,
       },
       null,
       2
