@@ -1,0 +1,57 @@
+name: Cross-platform validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validation:
+    name: ${{ matrix.os }} validation
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-14, ubuntu-24.04]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Enable Corepack
+        shell: bash
+        run: corepack enable
+      - name: Install dependencies
+        shell: bash
+        run: corepack pnpm install --frozen-lockfile
+      - name: Type check
+        shell: bash
+        run: corepack pnpm run type-check
+      - name: Build Electron main process
+        shell: bash
+        run: corepack pnpm run build:electron
+      - name: Test elevation protocol boundaries
+        shell: bash
+        run: corepack pnpm run test:elevation
+      - name: Test dependency cancellation
+        shell: bash
+        run: corepack pnpm run test:install-cancel
+      - name: Test configuration and log IPC services
+        shell: bash
+        run: corepack pnpm run test:config-log
+      - name: Test dependency failure handling
+        shell: bash
+        run: corepack pnpm run test:install-failures
+      - name: Test file ingestion
+        shell: bash
+        run: corepack pnpm run test:file-ingest
+
+      # This workflow never writes the real machine PATH or /etc files.
+      # Real UAC, AppleScript and polkit authorization still require manual
+      # validation on isolated machines after a successful CI run.

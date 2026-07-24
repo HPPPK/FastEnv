@@ -1,6 +1,6 @@
 {
   "name": "env-guard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Enterprise-grade development environment manager with intelligent conflict detection and repair",
   "main": "dist/electron/main/index.js",
   "homepage": "./",
@@ -18,7 +18,11 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "type-check": "tsc --noEmit",
-    "test:elevation": "pnpm run build:electron && node scripts/run-elevation-cases.cjs"
+    "test:elevation": "pnpm run build:electron && node scripts/run-elevation-cases.cjs",
+    "test:install-cancel": "pnpm run build:electron && node scripts/run-install-cancellation-case.cjs",
+    "test:config-log": "pnpm run build:electron && node scripts/run-config-log-cases.cjs",
+    "test:install-failures": "pnpm run build:electron && node scripts/run-install-failure-cases.cjs",
+    "test:file-ingest": "pnpm run build:electron && node scripts/run-file-ingest-cases.cjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",
@@ -86,7 +90,8 @@
         }
       ],
       "certificateFile": null,
-      "certificatePassword": null
+      "certificatePassword": null,
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,

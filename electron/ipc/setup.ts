@@ -27,6 +27,7 @@ import EnvironmentInstaller, {
 import { ConflictDetector } from '../../service/env-conflict/conflict-detector';
 import { ConflictFixer } from '../../service/env-conflict/conflict-fixer';
 import { SystemFixer } from '../../service/system-fix/system-fixer';
+import { fileReaderService } from '../../service/file-ingest/file-reader';
 import type { AppSettings, Dependency } from '../../src/types';
 import type { Environment } from '../../src/types';
 import type { ConflictIssue } from '../../service/env-conflict/conflict-detector';
@@ -40,6 +41,7 @@ const conflictFixerService = new ConflictFixer();
 const systemFixerService = new SystemFixer();
 let activeMainWindow: BrowserWindow | null = null;
 const createControllers = new Map<string, AbortController>();
+const installControllers = new Map<string, AbortController>();
 
 /**
  * 设置 IPC 通信处理
@@ -314,14 +316,98 @@ async function handleIPCRequest(
     case 'repair-records:list':
       return { records: persistenceManager.loadRepairRecords() };
 
+    case 'file:pick': {
+      const openDialogOptions: Electron.OpenDialogOptions = {
+        title: '选择需求文本文件',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Requirement text', extensions: ['txt', 'md', 'json', 'log'] },
+          { name: 'All files', extensions: ['*'] },
+        ],
+      };
+      const result = activeMainWindow
+        ? await dialog.showOpenDialog(activeMainWindow, openDialogOptions)
+        : await dialog.showOpenDialog(openDialogOptions);
+      const inputPath = result.filePaths[0];
+      if (result.canceled || !inputPath) return { success: false, canceled: true };
+      const file = fileReaderService.readRequirementFile(inputPath);
+      return { success: true, canceled: false, ...file };
+    }
+
     case 'config:get':
       return { config: persistenceManager.loadSettings() };
 
-    case 'config:set':
-      return { success: persistenceManager.saveSettings(data as AppSettings) };
+    case 'config:set': {
+      const config = data as AppSettings;
+      const success = persistenceManager.saveSettings(config);
+      if (success) logger.setLogLevel(config.logLevel);
+      return { success };
+    }
 
-    case 'log:get':
-      return { logs: [], total: 0 };
+    case 'config:export': {
+      const saveDialogOptions = {
+        title: 'Export EnvGuard configuration',
+        defaultPath: path.join(app.getPath('downloads'), 'envguard-config.json'),
+        buttonLabel: 'Export',
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      };
+      const result = activeMainWindow
+        ? await dialog.showSaveDialog(activeMainWindow, saveDialogOptions)
+        : await dialog.showSaveDialog(saveDialogOptions);
+      if (result.canceled || !result.filePath) return { success: false, canceled: true };
+      if (!persistenceManager.exportConfiguration(result.filePath)) {
+        throw new Error('Failed to export configuration');
+      }
+      logger.info('IPC', 'Configuration exported', { path: result.filePath });
+      return { success: true, canceled: false, exportedPath: result.filePath };
+    }
+
+    case 'config:import': {
+      const openDialogOptions: Electron.OpenDialogOptions = {
+        title: 'Import EnvGuard configuration',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      };
+      const result = activeMainWindow
+        ? await dialog.showOpenDialog(activeMainWindow, openDialogOptions)
+        : await dialog.showOpenDialog(openDialogOptions);
+      const inputPath = result.filePaths[0];
+      if (result.canceled || !inputPath) return { success: false, canceled: true };
+      if (!persistenceManager.importConfiguration(inputPath)) {
+        throw new Error('Invalid or unreadable EnvGuard configuration');
+      }
+      const config = persistenceManager.loadSettings();
+      logger.setLogLevel(config.logLevel);
+      logger.info('IPC', 'Configuration imported', { path: inputPath });
+      return { success: true, canceled: false, importedPath: inputPath, config };
+    }
+
+    case 'log:get': {
+      const payload = data as { lines?: unknown };
+      const lines = typeof payload?.lines === 'number' && Number.isFinite(payload.lines)
+        ? Math.max(1, Math.min(Math.floor(payload.lines), 1000))
+        : 200;
+      const logs = logger.getLogEntries(lines);
+      return { logs, total: logs.length, content: logger.getLogContent(lines), lines };
+    }
+
+    case 'log:clear':
+      return { success: logger.clearLogs() };
+
+    case 'log:export': {
+      const saveDialogOptions = {
+        title: 'Export EnvGuard logs',
+        defaultPath: path.join(app.getPath('downloads'), 'envguard-logs.log'),
+        buttonLabel: 'Export',
+        filters: [{ name: 'Log', extensions: ['log', 'txt'] }],
+      };
+      const result = activeMainWindow
+        ? await dialog.showSaveDialog(activeMainWindow, saveDialogOptions)
+        : await dialog.showSaveDialog(saveDialogOptions);
+      if (result.canceled || !result.filePath) return { success: false, canceled: true };
+      if (!logger.exportLogs(result.filePath)) throw new Error('Failed to export logs');
+      return { success: true, canceled: false, exportedPath: result.filePath };
+    }
 
     // 新增：环境创建服务
     case 'env:create-new': {
@@ -348,6 +434,8 @@ async function handleIPCRequest(
       const operationId =
         payload.operationId ??
         `dependency-install-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const controller = new AbortController();
+      installControllers.set(operationId, controller);
       const emitProgress = (progress: InstallProgress): void => {
         sender?.send('ipc:event', {
           channel: 'dependency:install:progress',
@@ -355,7 +443,24 @@ async function handleIPCRequest(
           timestamp: Date.now(),
         });
       };
-      return envInstaller.installPackages({ ...payload, onProgress: emitProgress });
+      try {
+        return await envInstaller.installPackages({
+          ...payload,
+          operationId,
+          signal: controller.signal,
+          onProgress: emitProgress,
+        });
+      } finally {
+        installControllers.delete(operationId);
+      }
+    }
+
+    case 'env:install-cancel': {
+      const payload = data as { operationId: string };
+      const controller = installControllers.get(payload.operationId);
+      controller?.abort();
+      const killed = envInstaller.cancel(payload.operationId);
+      return { success: Boolean(controller) || killed, operationId: payload.operationId };
     }
 
     // 新增：获取已安装包列表

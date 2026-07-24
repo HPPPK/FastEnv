@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Package, Play, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Package, Play, AlertCircle, CheckCircle, Loader, XCircle } from 'lucide-react';
 import { useEnvStore } from '../store/envStore';
 import { envguardApi } from '../api/envguard';
 
@@ -16,9 +16,9 @@ export const DependencyInstall: React.FC = () => {
   const [installing, setInstalling] = useState(false);
   const [installLogs, setInstallLogs] = useState<InstallLog[]>([]);
   const [installProgress, setInstallProgress] = useState(0);
-  const [installStatus, setInstallStatus] = useState<'idle' | 'installing' | 'success' | 'error'>(
-    'idle'
-  );
+  const [installStatus, setInstallStatus] = useState<
+    'idle' | 'installing' | 'success' | 'error' | 'cancelled'
+  >('idle');
   const [operationId, setOperationId] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +32,13 @@ export const DependencyInstall: React.FC = () => {
       if (!operationId || progress.operationId !== operationId) return;
 
       const level: InstallLog['level'] =
-        progress.status === 'failed' ? 'error' : progress.status === 'success' ? 'success' : 'info';
+        progress.status === 'failed'
+          ? 'error'
+          : progress.status === 'cancelled'
+            ? 'warn'
+            : progress.status === 'success'
+              ? 'success'
+              : 'info';
       setInstallProgress(progress.progress);
       setInstallLogs((logs) => [
         ...logs,
@@ -44,6 +50,8 @@ export const DependencyInstall: React.FC = () => {
       ]);
       if (progress.status === 'failed') {
         setInstallStatus('error');
+      } else if (progress.status === 'cancelled') {
+        setInstallStatus('cancelled');
       }
     });
   }, [operationId]);
@@ -119,8 +127,20 @@ export const DependencyInstall: React.FC = () => {
             refreshError instanceof Error ? refreshError.message : '未知刷新错误';
           addLog('安装已成功，但依赖列表刷新失败：' + refreshMessage, 'warn');
         }
+      } else if (result.cancelled) {
+        addLog(result.message || '安装已取消', 'warn');
+        setInstallStatus('cancelled');
       } else {
         addLog(`安装失败: ${result.message || result.error || '未知错误'}`, 'error');
+        const failureReasons = result.details?.failureReasons as Record<string, string> | undefined;
+        if (failureReasons) {
+          Object.entries(failureReasons).forEach(([pkg, reason]) => {
+            addLog(`${pkg} 失败分类: ${reason}`, 'warn');
+          });
+        }
+        if (result.details?.consistencyVerified === false) {
+          addLog('安装后依赖清单未能确认完整一致，请重新扫描环境。', 'warn');
+        }
         setInstallStatus('error');
       }
     } catch (error) {
@@ -129,6 +149,17 @@ export const DependencyInstall: React.FC = () => {
       setInstallStatus('error');
     } finally {
       setInstalling(false);
+      setOperationId(null);
+    }
+  };
+
+  const handleCancel = async (): Promise<void> => {
+    if (!operationId) return;
+    try {
+      await envguardApi.cancelDependencyInstall(operationId);
+      addLog('已发送取消请求，正在终止安装进程...', 'warn');
+    } catch (error) {
+      addLog(error instanceof Error ? error.message : '取消安装失败', 'error');
     }
   };
 
@@ -263,6 +294,15 @@ export const DependencyInstall: React.FC = () => {
                   </>
                 )}
               </button>
+              {installing && (
+                <button
+                  onClick={() => void handleCancel()}
+                  className="w-full mt-3 bg-amber-700 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <XCircle size={18} />
+                  取消安装
+                </button>
+              )}
 
               {/* 清空日志按钮 */}
               {installLogs.length > 0 && (
@@ -321,7 +361,9 @@ export const DependencyInstall: React.FC = () => {
                       ? '安装成功'
                       : installStatus === 'error'
                         ? '安装失败'
-                        : '安装中...'}
+                        : installStatus === 'cancelled'
+                          ? '安装已取消'
+                          : '安装中...'}
                   </span>
                 </div>
               )}

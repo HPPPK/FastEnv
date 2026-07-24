@@ -33,6 +33,7 @@ export const IPC_CHANNELS = {
   DEPENDENCY_UNINSTALL: 'dependency:uninstall',
   DEPENDENCY_LIST: 'dependency:list',
   DEPENDENCY_INSTALL_PROGRESS: 'dependency:install:progress',
+  DEPENDENCY_INSTALL_CANCEL: 'env:install-cancel',
 
   // 冲突检测与修复相关
   CONFLICT_DETECT: 'conflict:detect',
@@ -54,6 +55,7 @@ export const IPC_CHANNELS = {
   // 日志相关
   LOG_GET: 'log:get',
   LOG_CLEAR: 'log:clear',
+  LOG_EXPORT: 'log:export',
 
   // 文件操作相关
   FILE_OPEN: 'file:open',

@@ -53,6 +53,18 @@ export default function NewEnv(): JSX.Element {
     setRequirement(content);
   };
 
+  const handleNativeFilePick = async (): Promise<void> => {
+    try {
+      const result = await envguardApi.pickRequirementFile();
+      if (result.success && result.content) {
+        setRequirement(result.content);
+        addNotification({ type: 'success', title: '文件已读取', message: result.fileName ?? '需求文件已加载' });
+      }
+    } catch (error) {
+      addNotification({ type: 'error', title: '文件读取失败', message: error instanceof Error ? error.message : '无法读取需求文件' });
+    }
+  };
+
   const handleCreate = async (): Promise<void> => {
     if (!requirement.trim()) {
       addNotification({
@@ -249,6 +261,13 @@ export default function NewEnv(): JSX.Element {
             {activeTab === 'document' && (
               <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
                 <Upload size={32} className="mx-auto mb-2 text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => void handleNativeFilePick()}
+                  className="mx-auto mb-3 flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  <Upload size={16} /> 使用系统文件选择器
+                </button>
                 <input
                   type="file"
                   className="mx-auto mt-4 block max-w-xs text-sm"

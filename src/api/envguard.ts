@@ -23,7 +23,7 @@ export interface ConflictSummary {
 export interface DependencyInstallProgress {
   operationId: string;
   package: string;
-  status: 'installing' | 'success' | 'failed';
+  status: 'installing' | 'success' | 'failed' | 'cancelled';
   progress: number;
   message: string;
   error?: string;
@@ -131,12 +131,67 @@ export const envguardApi = {
     return ipcClient.invoke('config:set', config);
   },
 
+  async pickRequirementFile(): Promise<{
+    success: boolean;
+    canceled?: boolean;
+    filePath?: string;
+    fileName?: string;
+    extension?: string;
+    content?: string;
+    size?: number;
+  }> {
+    return ipcClient.invoke('file:pick', undefined, 120000);
+  },
+
+  async exportConfiguration(): Promise<{ success: boolean; canceled?: boolean; exportedPath?: string }> {
+    return ipcClient.invoke('config:export', undefined, 120000);
+  },
+
+  async importConfiguration(): Promise<{
+    success: boolean;
+    canceled?: boolean;
+    importedPath?: string;
+    config?: AppSettings;
+  }> {
+    return ipcClient.invoke('config:import', undefined, 120000);
+  },
+
+  async getLogs(lines: number = 200): Promise<{
+    logs: import('../types').LogEntry[];
+    total: number;
+    content: string;
+    lines: number;
+  }> {
+    return ipcClient.invoke('log:get', { lines });
+  },
+
+  async clearLogs(): Promise<{ success: boolean }> {
+    return ipcClient.invoke('log:clear');
+  },
+
+  async exportLogs(): Promise<{ success: boolean; canceled?: boolean; exportedPath?: string }> {
+    return ipcClient.invoke('log:export', undefined, 120000);
+  },
+
+  async cancelDependencyInstall(
+    operationId: string
+  ): Promise<{ success: boolean; operationId: string }> {
+    return ipcClient.invoke('env:install-cancel', { operationId }, 10000);
+  },
+
   async installDependency(
     environmentPath: string,
     environmentType: string,
     packages: string[],
     operationId?: string
-  ): Promise<{ success: boolean; error?: string; message?: string; failed?: string[] }> {
+  ): Promise<{
+    success: boolean;
+    cancelled?: boolean;
+    error?: string;
+    message?: string;
+    failed?: string[];
+    details?: Record<string, unknown>;
+  }> {
     return ipcClient.invoke('env:install-packages', {
       environmentPath,
       environmentType,

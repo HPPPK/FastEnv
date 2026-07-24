@@ -18,8 +18,8 @@ export class Logger {
   private maxLogSize = 10 * 1024 * 1024; // 10MB
   private maxLogFiles = 10;
 
-  constructor(logLevel: string = 'info') {
-    this.logDir = path.join(os.homedir(), '.envguard', 'logs');
+  constructor(logLevel: string = 'info', logDir?: string) {
+    this.logDir = logDir ?? path.join(os.homedir(), '.envguard', 'logs');
     this.logLevel = logLevel;
     this.ensureLogDir();
     this.currentLogFile = this.getLogFilePath();
@@ -216,6 +216,47 @@ export class Logger {
   /**
    * 获取日志文件内容
    */
+  /** Return structured entries parsed from current and rotated log files. */
+  public getLogEntries(lines: number = 200): LogEntry[] {
+    const safeLines = Math.max(1, Math.min(Math.floor(lines), 1000));
+    try {
+      const files = fs.readdirSync(this.logDir)
+        .filter((file) => file.startsWith('envguard-') && file.endsWith('.log'))
+        .sort();
+      const entries: LogEntry[] = [];
+      const linePattern = /^(\S+)\s+(DEBUG|INFO|WARN|ERROR)\s+\[([^\]]+)\]\s+(.*)$/;
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(this.logDir, file), 'utf-8');
+        for (const line of content.split(/\r?\n/)) {
+          if (!line.trim()) continue;
+          const match = line.match(linePattern);
+          if (!match) continue;
+          const [, timestampText, levelText, module, payload] = match;
+          const separator = payload.lastIndexOf(' | ');
+          const message = separator >= 0 ? payload.slice(0, separator) : payload;
+          const dataText = separator >= 0 ? payload.slice(separator + 3) : undefined;
+          let data: unknown;
+          if (dataText) {
+            try { data = JSON.parse(dataText); } catch { data = dataText; }
+          }
+          const timestamp = Date.parse(timestampText);
+          entries.push({
+            id: 'log-' + timestamp + '-' + entries.length,
+            timestamp,
+            level: levelText.toLowerCase() as LogEntry['level'],
+            module,
+            message,
+            ...(data !== undefined ? { data } : {}),
+          });
+        }
+      }
+      return entries.slice(-safeLines).reverse();
+    } catch (error) {
+      console.error('Failed to read structured logs:', error);
+      return [];
+    }
+  }
+
   public getLogContent(lines: number = 100): string {
     try {
       if (!fs.existsSync(this.currentLogFile)) {
@@ -236,8 +277,8 @@ export class Logger {
    */
   public clearLogs(): boolean {
     try {
-      const files = fs.readdirSync(this.logDir);
-      files.forEach(file => {
+      const files = fs.readdirSync(this.logDir).filter((file) => file.startsWith('envguard-') && file.endsWith('.log'));
+      files.forEach((file) => {
         fs.unlinkSync(path.join(this.logDir, file));
       });
       return true;

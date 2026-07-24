@@ -41,8 +41,6 @@ dist_electron/
 temp/
 tmp/
 
-# Documentation
-docs/
 
 # Local isolated installation test artifacts
 .tmp-test/

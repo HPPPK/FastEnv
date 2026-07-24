@@ -95,7 +95,7 @@ Current main-process handlers:
 - `repair-records:list`
 - `config:get`
 - `config:set`
-- `log:get` placeholder
+- `log:get`, `log:clear`, and `log:export`
 
 ## Current Project Structure Highlights
 
@@ -166,55 +166,43 @@ The project is not complete against the user's full enterprise specification.
 
 ### ⚠️ Still Missing or Incomplete
 
-- Real shadcn/ui component library is not installed or generated.
-- Dependency installation UI exists, but install/progress IPC is not wired end to end.
-- Conflict repair is conservative/skeletal and does not yet safely mutate system PATH or global env vars.
-- Full backup replay and rollback semantics are not production-grade.
-- OCR/image parsing UI is not actually integrated; screenshot mode currently handles text-like uploads only.
+- Real shadcn/ui component library is not installed or generated; decide whether to adopt it after behavior stabilizes.
+- Dependency installation now has real progress/cancellation IPC, pre/post package snapshots, failure classification, partial-success reporting, and isolated regression coverage; real network/permission/disk failures and safe rollback still need Windows validation.
+- Conflict repair has Windows real UAC/UI evidence; macOS/Linux authorization, write, verification, and rollback still require isolated machine validation.
+- Full backup replay and rollback semantics are not production-grade for all environment variables.
+- OCR/image parsing UI is not actually integrated; screenshot mode currently handles text-like OCR content only.
+- Log query/clear/export and configuration import/export have a basic IPC/UI loop; native text file picker is wired for TXT/MD/JSON/LOG, while PDF/DOCX/OCR remain incomplete.
 - Auto-update, startup integration, context menu integration, and polished installer UX are not implemented.
-- System permission prompts and second-confirmation flows need hardening.
-- No automated tests or pressure/stress validation exist.
-- Environment creation flow UI not fully wired to backend.
-- Dependency installation progress visualization not connected to real install events.
-- New build environment page needs backend service integration.
-- Conflict detection and repair services need full implementation.
-- Global settings page needs backend service integration.
-- Packaging and deployment configuration not yet implemented.
+- Cross-platform packaging and publishing are not complete.
 
-## Latest Session Improvements (2026-05-18)
+## Latest Session Improvements (2026-07-23)
 
-1. **Home Page Enhancements**
-   - Implemented 5-minute cache TTL for environment lists
-   - Added manual refresh button with loading states
-   - Display last refresh timestamp
-   - Support search/filter for environments
+1. **Dependency installation cancellation**
+   - Replaced synchronous install commands with asynchronous child processes.
+   - Added operationId and AbortController wiring through the Electron IPC layer.
+   - Added env:install-cancel and Windows taskkill process-tree cleanup.
+   - Added package/mirror shell-character validation and a cancellation regression test.
 
-2. **Environment Detail Page**
-   - Added caching to prevent reload on navigation
-   - Tab-based UI fully functional (Config, Dependencies, Tutorial, History)
-   - Manual refresh capability
-   - Real dependency list display with version info
+2. **Cross-platform validation workflow**
+   - Added .github/workflows/cross-platform-validation.yml for Windows, macOS, and Linux.
+   - CI runs type-check, Electron compilation, elevation protocol boundary tests, and install cancellation tests.
+   - CI intentionally does not write real Windows registry or macOS/Linux system profile files.
 
-3. **System Scanner Improvements**
-   - Auto-scans Python dependencies via `pip list --format=json`
-   - Auto-scans Node dependencies via `npm list --depth=0 --json`
-   - Cross-platform path handling (Windows/Mac/Linux)
-   - Graceful error handling with fallback to empty list
-   - Limits display to first 10 dependencies per environment
-
-4. **Documentation**
-   - Created comprehensive PROJECT_STATUS.md with:
-     - Detailed completion status by module
-     - Prioritized todo list
-     - Known issues and technical debt
-     - Next steps action plan
-   - Updated AGENTS.md with latest improvements
+3. **Documentation**
+   - Added docs/cross-platform-validation.md.
+   - Added docs/next-priority.md.
+   - README.md now reflects the cancellation implementation and the remaining real-platform evidence.
 
 ## Verification Commands
 
 Use these before reporting completion:
 
-```bash
+```
+# dependency cancellation regression
+corepack pnpm run test:install-cancel
+corepack pnpm run test:install-failures
+corepack pnpm run test:file-ingest
+corepack pnpm run test:config-log
 PATH=/opt/homebrew/bin:/usr/local/bin:$PATH corepack pnpm run type-check
 PATH=/opt/homebrew/bin:/usr/local/bin:$PATH corepack pnpm run build:electron
 PATH=/opt/homebrew/bin:/usr/local/bin:$PATH corepack pnpm run build:vite
@@ -245,10 +233,25 @@ Do not claim this is a finished enterprise-grade product. It is currently a work
 
 Next best engineering steps:
 
-1. Replace mock/skeletal dependency installation with real IPC progress events from `service/env-install`.
-2. Make conflict repair produce an explicit preview before any system mutation.
-3. Add safe backup and rollback replay per platform.
-4. Add real file-picker IPC and OCR flow for documents/screenshots.
-5. Decide whether to actually adopt shadcn/ui or remove that claim.
-6. Add tests for scanner, demand parser, persistence, IPC routing, and conflict detection.
-7. Clean lint warnings after behavior stabilizes.
+1. Commit/push the current Windows-focused changes, let GitHub Actions run, and prepare the next Windows Release.
+2. Validate real Windows network, permission, disk-space, multi-package failure, post-install consistency, and safe rollback cases.
+3. Add PDF/DOCX extraction, image OCR, preview, retry, and user confirmation on top of the text file picker.
+4. Extend environment-variable transactions and replayable rollback after the PATH path is stable.
+5. Add unit, IPC, renderer, Electron E2E, concurrency, and stress tests.
+6. Decide whether to adopt shadcn/ui after behavior and Windows packaging stabilize.
+
+
+## Follow-up Improvements (2026-07-23)
+
+- Completed the P1 log/config IPC slice: native config import/export, structured log query, log clear/export, settings-page controls, and isolated regression coverage.
+- Configuration imports validate the snapshot and restore the previous data set when persistence fails; imports never mutate system PATH or shell profiles.
+- Added docs/config-log-ipc.md; keep README, AGENTS.md, and docs/next-priority.md synchronized when this behavior changes.
+- The next evidence gap remains real macOS/Linux authorization, write verification, rollback, and restart validation. CI is intentionally isolated and is not evidence of real system-level mutation.
+
+
+## Follow-up Improvements (2026-07-24)
+
+- Added install-before/after dependency snapshots, failure classification, rollback candidates, and consistency status.
+- Added isolated network/permission/peer-conflict/partial-success tests in scripts/run-install-failure-cases.cjs.
+- Added native file:pick for bounded text requirement files and documented the remaining PDF/DOCX/OCR boundary.
+- macOS work is intentionally deferred for this phase; current next action is Windows delivery and validation.

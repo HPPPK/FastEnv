@@ -23,9 +23,9 @@ export class PersistenceManager {
   private dataDir: string;
   private encryptionKey: string;
 
-  constructor() {
-    this.dataDir = path.join(os.homedir(), '.envguard', 'data');
-    this.encryptionKey = this.getOrCreateEncryptionKey();
+  constructor(dataDir?: string, keyPath?: string) {
+    this.dataDir = dataDir ?? path.join(os.homedir(), '.envguard', 'data');
+    this.encryptionKey = this.getOrCreateEncryptionKey(keyPath);
     this.ensureDataDir();
   }
 
@@ -41,8 +41,8 @@ export class PersistenceManager {
   /**
    * 获取或创建加密密钥
    */
-  private getOrCreateEncryptionKey(): string {
-    const keyPath = path.join(os.homedir(), '.envguard', '.key');
+  private getOrCreateEncryptionKey(customKeyPath?: string): string {
+    const keyPath = customKeyPath ?? path.join(os.homedir(), '.envguard', '.key');
     const keyDir = path.dirname(keyPath);
 
     if (!fs.existsSync(keyDir)) {
@@ -259,6 +259,29 @@ export class PersistenceManager {
     };
   }
 
+  private isValidSettings(value: unknown): value is AppSettings {
+    if (!value || typeof value !== 'object') return false;
+    const settings = value as Partial<AppSettings>;
+    return (settings.theme === 'light' || settings.theme === 'dark')
+      && (settings.language === 'zh' || settings.language === 'zh-CN' || settings.language === 'en')
+      && typeof settings.autoBackup === 'boolean'
+      && (settings.logLevel === 'debug' || settings.logLevel === 'info' || settings.logLevel === 'warn' || settings.logLevel === 'error');
+  }
+
+  private isValidConfiguration(value: unknown): value is {
+    environments: Environment[];
+    records: RepairRecord[];
+    settings: AppSettings;
+  } {
+    if (!value || typeof value !== 'object') return false;
+    const config = value as { environments?: unknown; records?: unknown; settings?: unknown };
+    return Array.isArray(config.environments)
+      && config.environments.every((environment) => environment && typeof environment === 'object')
+      && Array.isArray(config.records)
+      && config.records.every((record) => record && typeof record === 'object')
+      && this.isValidSettings(config.settings);
+  }
+
   /**
    * 导出配置
    */
@@ -288,22 +311,27 @@ export class PersistenceManager {
    * 导入配置
    */
   public importConfiguration(inputPath: string): boolean {
+    const previous = {
+      environments: this.loadEnvironments(),
+      records: this.loadRepairRecords(),
+      settings: this.loadSettings(),
+    };
     try {
-      const data = fs.readFileSync(inputPath, 'utf-8');
-      const config = JSON.parse(data);
-
-      if (config.environments) {
-        this.saveEnvironments(config.environments);
+      const config: unknown = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
+      if (!this.isValidConfiguration(config)) {
+        throw new Error('Invalid EnvGuard configuration export');
       }
-      if (config.records) {
-        this.saveRepairRecords(config.records);
+      const imported = config as { environments: Environment[]; records: RepairRecord[]; settings: AppSettings };
+      if (!this.saveEnvironments(imported.environments)
+        || !this.saveRepairRecords(imported.records)
+        || !this.saveSettings(imported.settings)) {
+        throw new Error('Failed to persist imported configuration');
       }
-      if (config.settings) {
-        this.saveSettings(config.settings);
-      }
-
       return true;
     } catch (error) {
+      this.saveEnvironments(previous.environments);
+      this.saveRepairRecords(previous.records);
+      this.saveSettings(previous.settings);
       console.error('Failed to import configuration:', error);
       return false;
     }

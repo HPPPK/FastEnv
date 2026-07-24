@@ -6,7 +6,7 @@
 // ============ 应用信息 ============
 export const APP_INFO = {
   name: 'EnvGuard',
-  version: '0.1.0',
+  version: '0.1.2',
   description: 'Enterprise-grade development environment manager',
   author: 'EnvGuard Team',
   homepage: 'https://envguard.dev',

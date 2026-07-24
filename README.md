@@ -1,6 +1,6 @@
 # EnvGuard - 企业级开发环境管理平台
 
-![Version](https://img.shields.io/badge/version-0.1.1-blue)
+![Version](https://img.shields.io/badge/version-0.1.2-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -16,7 +16,7 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - 🔍 **冲突智能检测** - 检测常见 PATH、版本、依赖和环境变量冲突
 - ⚡ **冲突修复** - 提供修复方案预览、备份和回滚基础能力
 - 📦 **依赖管理** - 隔离环境内依赖安装、升级、卸载
-- 💾 **配置备份** - 本地加密存储，配置导入导出持续完善中
+- 💾 **配置备份** - 本地加密存储，支持配置导入导出
 - 📊 **可视化管理** - 企业级 UI 设计，零学习成本
 
 ## 🛠 技术栈
@@ -57,6 +57,9 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - 冲突扫描页面已适配后端返回的 `{ conflicts, summary }` 结构，并增加修复方案预览。
 - 设置页面已通过 `config:get` / `config:set` 持久化镜像源、主题、备份开关和日志等级。
 - 依赖安装服务已通过 `dependency:install:progress` 向界面发送包级进度。
+- 依赖安装已改为异步子进程，增加 `operationId`、`AbortController`、Windows `taskkill /t` 子进程树清理和 `env:install-cancel` 取消 IPC；包名与镜像源会先经过 shell 字符校验。
+- 已增加可重复的安装取消回归测试：`scripts/run-install-cancellation-case.cjs`，使用模拟长运行 npm 进程验证取消结果、取消进度事件和进程终止时间。
+- 已新增 `.github/workflows/cross-platform-validation.yml`，在 Windows、macOS 和 Linux 上执行类型检查、Electron 编译、提权协议隔离测试和安装取消回归测试；CI 不会写入真实系统环境。
 - Electron 运行时已通过 `.npmrc` 配置的国内镜像成功安装，开发模式已完成启动冒烟验证。
 - 首页扫描缓存已增加稳定的缓存保护，Windows 环境扫描使用 `where.exe` 查找 Python/Node 等可执行文件。
 - 需求解析已修复短关键词误匹配（例如 `go` 命中普通英文单词），并补充 Node.js 版本、React/TypeScript/Vite、Spring Boot/JUnit 等真实项目依赖识别。
@@ -78,25 +81,28 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - 已完成一次真实 Windows 系统级 PATH 写入验证：使用当前 HKLM PATH 已存在的第一项，通过一次性 PowerShell UAC 助手完成管理员级写入，返回 `success: true`，写入前后 PATH 长度均为 308，完整字符串一致，因此没有改变用户当前系统配置。
 - 已完成一次真实 Windows UI 端到端验证：在隔离 Vite 5174 + Electron CDP 会话中进入“冲突修复”，输入 `C:\Python314\Scripts\`、勾选二次确认并点击“确认写入系统级 PATH”；页面显示成功，备份中的写入前 PATH 与当前 HKLM PATH 完全一致，且 UI IPC 未发生 120 秒阻塞超时。
 - Windows x64 打包产物已验证包含 NSIS 安装器、便携版和 `resources/elevation-helper.ps1` / 解包后的 Node 提权协议文件。
+- 已新增 `docs/cross-platform-validation.md` 和 `docs/next-priority.md`，记录 macOS/Linux 尚待实机验收的边界和下一阶段顺序。
 
 ### 仍在开发中
 
 - 图片 OCR、PDF/DOCX 解析尚未接入；当前新建环境支持文本和文本类文件，截图页仅接受 OCR 后的文本日志。
 - “复用旧环境”目前只生成分析建议，不会自动修改或升级旧环境。
 - 冲突修复的 UI 预览、二次确认、用户级 PATH 写入、只读权限预检、一次性系统级 PATH 助手和跨平台回滚基础已完成；仍需在真实 macOS/Linux 机器或 CI 上验证授权取消、polkit/AppleScript 行为，并继续扩展其他变量类型。
-- 日志查看器、日志导出、配置导入导出尚未完成完整 IPC 链路。
-- 仍需补充正式的自动化测试框架和 CI 测试；当前已提供本地可重复的隔离安装、需求解析和冲突检测验收脚本。
-- Windows x64 Electron 安装器与便携版已发布到 v0.1.1 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
+- 日志查询、清理和导出以及配置导入导出已完成 IPC/UI 基础闭环。
+- 跨平台 CI 验证工作流已补充，但尚未以本次本地执行结果替代 GitHub Actions 的真实 run；macOS/Linux 授权取消、polkit/AppleScript 和系统写入仍需隔离实机验收。
+- Windows x64 Electron 安装器与便携版已发布到 v0.1.2 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
 - Windows 系统级 PATH 已在当前机器完成一次真实 UAC 验证；macOS/Linux 仍仅完成代码路径和隔离协议验证，未声称有对应实机写入证据。
-- 依赖安装的取消、权限失败、网络失败和跨平台回滚语义仍需继续强化；当前成功后的依赖刷新与创建环境附带依赖已完成真实 Windows 回归验证。
+- 依赖安装取消、失败分类、部分成功和安装前后清单已有隔离回归；真实网络/权限/磁盘空间失败和安全回滚仍需 Windows 验收。
+- 原生文本文件选择已接入；PDF/DOCX 和真实 OCR 仍未完成，日志与配置 IPC 已接入。
 
 ### 推荐开发顺序
 
-1. 在真实 macOS/Linux 机器或 CI 上验证一次性提权助手的授权取消、polkit/AppleScript、写入和回滚。
-2. 补齐真实环境创建和依赖安装的异常、取消、权限提示与回滚验证。
-3. 接入 OCR/文档解析和文件选择 IPC。
+1. 整理当前 diff，commit/push，让 GitHub Actions 跑通并准备新的 Windows Release。
+2. 在 Windows 隔离环境补齐真实网络失败、权限失败、磁盘空间失败、部分成功和安全回滚验收。
+3. 在原生文本文件选择基础上接入 PDF/DOCX 文本提取和可替换 OCR provider。
 4. 为系统冲突修复扩展其他变量类型、持久化配置回放和回滚验证。
-5. 补齐日志、配置导入导出，再进行 Windows/macOS/Linux 正式发布验收。
+5. 补充单元、IPC、renderer、Electron E2E、并发和压力测试。
+6. macOS/Linux 相关工作暂缓。
 
 `AGENTS.md` 是开发交接说明；若其中的状态描述与实际源码不一致，以实际源码和本节的验证结果为准。
 
@@ -139,6 +145,14 @@ node scripts/run-install-cases.cjs
 ```
 
 测试目录是临时目录，可在确认不再需要报告后删除；不要把测试依赖安装到系统 Python 或全局 npm。
+
+### 依赖安装取消回归测试
+
+```powershell
+pnpm run test:install-cancel
+```
+
+该测试使用隔离目录中的模拟长运行 npm 进程，验证 operationId、取消 IPC、取消进度事件和子进程终止；不会安装真实第三方依赖，也不会修改用户项目。
 
 ### 提权助手隔离测试
 
@@ -255,10 +269,10 @@ pnpm run test:elevation
 
 ## 📦 下载并安装已发布版本
 
-Windows x64 用户可以直接从 [EnvGuard v0.1.1 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.1) 下载：
+Windows x64 用户可以直接从 [EnvGuard v0.1.2 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.2) 下载：
 
-- `EnvGuard.Setup.0.1.1.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
-- `EnvGuard.0.1.1.exe`：便携版，无需安装，直接运行即可。
+- `EnvGuard.Setup.0.1.2.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
+- `EnvGuard.0.1.2.exe`：便携版，无需安装，直接运行即可。
 
 当前安装包未配置代码签名证书，Windows 首次运行时可能显示 SmartScreen 或未知发布者提示；请确认文件来自上述 GitHub Release 后再继续。当前 Release 已包含 NSIS 安装器、便携版、blockmap 和 `latest.yml` 资产。
 
@@ -380,7 +394,7 @@ A: 查看修复日志了解详情，或使用"回滚"功能恢复原始配置。
 
 ### 日志查看
 
-当前日志服务和 `log:get` IPC 仍在完善中。环境配置和修复记录存储在用户目录 `~/.envguard/data/`，设置文件为 `settings.json`。
+当前日志服务支持查询、清理和导出；环境配置和修复记录存储在用户目录 `~/.envguard/data/`，设置文件为 `settings.json`。
 
 在 Windows PowerShell 中可以先检查数据目录：
 
@@ -424,3 +438,14 @@ Get-ChildItem "$HOME\.envguard\data"
 ---
 
 **Made with ❤️ by FastEnv Team**
+
+
+## 2026-07-23 本轮进展
+
+- 依赖安装支持异步进程、进度事件和可终止取消；覆盖 Windows 进程树清理。
+- 配置导入/导出已接入原生文件对话框，导入前执行结构校验并在失败时恢复快照。
+- 日志查询、清空和导出已接入主进程 IPC，设置页可直接操作。
+- 新增隔离回归：pnpm run test:config-log；跨平台 CI 会在 Windows、macOS 和 Linux 上执行。
+- 依赖安装新增网络、权限、peer conflict、部分成功和安装前后清单回归；新建环境新增原生 TXT/MD/JSON/LOG 文件选择。
+
+当前仍不能宣称 macOS/Linux 已完成真实系统级授权写入；CI 只验证协议边界和隔离测试，不修改真实系统配置。详细状态见 docs/config-log-ipc.md 和 docs/next-priority.md。
