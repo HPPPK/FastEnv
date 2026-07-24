@@ -9,13 +9,13 @@
 - 配置导入导出、日志查询/清理/导出基础 IPC/UI 闭环
 - 安装前后依赖清单、失败分类、部分成功状态和回归脚本
 - 原生需求文本文件选择和 10 MB 文本读取校验
-- Windows x64 NSIS/Portable v0.1.1 发布
+- Windows x64 NSIS/Portable v0.1.3 发布（未签名）
 
 ## 当前行动顺序（暂不处理 macOS）
 
 ### P0：先完成交付链路
 
-整理当前 diff，commit、push，让 GitHub Actions 跑完，再根据 CI 结果发布新的 Windows 版本。当前本地改动仍未完成 commit/push/release。
+已完成当前 Windows 交付链路：修复 CI、commit/push，并发布 v0.1.3；GitHub Actions 的 Windows、macOS、Linux 矩阵验证全部通过。
 
 ### P1：依赖安装真实异常验收
 

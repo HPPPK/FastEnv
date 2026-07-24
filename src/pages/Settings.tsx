@@ -292,7 +292,7 @@ export default function Settings(): JSX.Element {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">版本号</span>
-              <span className="font-medium text-foreground">0.1.2</span>
+              <span className="font-medium text-foreground">0.1.3</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">配置存储</span>

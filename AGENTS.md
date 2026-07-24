@@ -233,12 +233,11 @@ Do not claim this is a finished enterprise-grade product. It is currently a work
 
 Next best engineering steps:
 
-1. Commit/push the current Windows-focused changes, let GitHub Actions run, and prepare the next Windows Release.
-2. Validate real Windows network, permission, disk-space, multi-package failure, post-install consistency, and safe rollback cases.
-3. Add PDF/DOCX extraction, image OCR, preview, retry, and user confirmation on top of the text file picker.
-4. Extend environment-variable transactions and replayable rollback after the PATH path is stable.
-5. Add unit, IPC, renderer, Electron E2E, concurrency, and stress tests.
-6. Decide whether to adopt shadcn/ui after behavior and Windows packaging stabilize.
+1. Validate real Windows network, permission, disk-space, multi-package failure, post-install consistency, and safe rollback cases.
+2. Add PDF/DOCX extraction, image OCR, preview, retry, and user confirmation on top of the text file picker.
+3. Extend environment-variable transactions and replayable rollback after the PATH path is stable.
+4. Add unit, IPC, renderer, Electron E2E, concurrency, and stress tests.
+5. Decide whether to adopt shadcn/ui after behavior and Windows packaging stabilize.
 
 
 ## Follow-up Improvements (2026-07-23)
@@ -254,4 +253,6 @@ Next best engineering steps:
 - Added install-before/after dependency snapshots, failure classification, rollback candidates, and consistency status.
 - Added isolated network/permission/peer-conflict/partial-success tests in scripts/run-install-failure-cases.cjs.
 - Added native file:pick for bounded text requirement files and documented the remaining PDF/DOCX/OCR boundary.
-- macOS work is intentionally deferred for this phase; current next action is Windows delivery and validation.
+- Fixed the CI pnpm setup order and stabilized cross-platform elevation/cancellation regression tests; run 30092390926 passed on Windows, macOS, and Linux.
+- Published Windows x64 v0.1.3 NSIS and Portable assets; the assets are unsigned and may trigger SmartScreen warnings.
+- macOS/Linux real system authorization, write verification, rollback, and packaging remain intentionally deferred.

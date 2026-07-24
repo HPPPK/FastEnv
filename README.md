@@ -1,6 +1,6 @@
 # EnvGuard - 企业级开发环境管理平台
 
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-0.1.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -90,7 +90,7 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - 冲突修复的 UI 预览、二次确认、用户级 PATH 写入、只读权限预检、一次性系统级 PATH 助手和跨平台回滚基础已完成；仍需在真实 macOS/Linux 机器或 CI 上验证授权取消、polkit/AppleScript 行为，并继续扩展其他变量类型。
 - 日志查询、清理和导出以及配置导入导出已完成 IPC/UI 基础闭环。
 - 跨平台 CI 验证工作流已补充，但尚未以本次本地执行结果替代 GitHub Actions 的真实 run；macOS/Linux 授权取消、polkit/AppleScript 和系统写入仍需隔离实机验收。
-- Windows x64 Electron 安装器与便携版已发布到 v0.1.2 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
+- Windows x64 Electron 安装器与便携版已发布到 v0.1.3 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
 - Windows 系统级 PATH 已在当前机器完成一次真实 UAC 验证；macOS/Linux 仍仅完成代码路径和隔离协议验证，未声称有对应实机写入证据。
 - 依赖安装取消、失败分类、部分成功和安装前后清单已有隔离回归；真实网络/权限/磁盘空间失败和安全回滚仍需 Windows 验收。
 - 原生文本文件选择已接入；PDF/DOCX 和真实 OCR 仍未完成，日志与配置 IPC 已接入。
@@ -269,10 +269,10 @@ pnpm run test:elevation
 
 ## 📦 下载并安装已发布版本
 
-Windows x64 用户可以直接从 [EnvGuard v0.1.2 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.2) 下载：
+Windows x64 用户可以直接从 [EnvGuard v0.1.3 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.3) 下载：
 
-- `EnvGuard.Setup.0.1.2.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
-- `EnvGuard.0.1.2.exe`：便携版，无需安装，直接运行即可。
+- `EnvGuard.Setup.0.1.3.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
+- `EnvGuard.0.1.3.exe`：便携版，无需安装，直接运行即可。
 
 当前安装包未配置代码签名证书，Windows 首次运行时可能显示 SmartScreen 或未知发布者提示；请确认文件来自上述 GitHub Release 后再继续。当前 Release 已包含 NSIS 安装器、便携版、blockmap 和 `latest.yml` 资产。
 
@@ -439,6 +439,14 @@ Get-ChildItem "$HOME\.envguard\data"
 
 **Made with ❤️ by FastEnv Team**
 
+
+## 2026-07-24 本轮进展
+
+- 修复 GitHub Actions 的 pnpm 缓存初始化顺序：先安装仓库声明的 pnpm 10.30.3，再启用 Node.js 缓存。
+- 修复跨平台提权协议回归测试在 Linux 上误将当前平台当作匹配平台的问题。
+- 修复 macOS/Linux 取消依赖安装时只终止 shell、遗留子进程的问题；Unix 安装进程组现在支持终止和强制结束，模拟 npm 的快照阶段也不会阻塞取消断言。
+- GitHub Actions 跨平台验证已在 Windows、macOS、Linux 全部通过（run 30092390926）。
+- Windows x64 未签名 NSIS/Portable 安装资产已发布到 [EnvGuard v0.1.3 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.3)。
 
 ## 2026-07-23 本轮进展
 
