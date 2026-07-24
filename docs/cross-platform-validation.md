@@ -4,6 +4,8 @@
 
 Windows 的系统级 PATH 一次性提权助手已经完成真实 UAC 与 UI 端到端验证。macOS/Linux 目前已完成代码路径和协议隔离测试，但尚未声称完成真实系统级写入验收。
 
+工作流会先通过 pnpm/action-setup 安装仓库声明的 pnpm 版本，再启用 Node.js 的 pnpm 缓存；这样三种 runner 在缓存初始化阶段就能找到 pnpm。
+
 本项目新增 GitHub Actions 矩阵：
 
 - windows-latest
