@@ -271,8 +271,8 @@ pnpm run test:elevation
 
 Windows x64 用户可以直接从 [EnvGuard v0.1.3 Release](https://github.com/HPPPK/FastEnv/releases/tag/v0.1.3) 下载：
 
-- `EnvGuard.Setup.0.1.3.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
-- `EnvGuard.0.1.3.exe`：便携版，无需安装，直接运行即可。
+- `EnvGuard-Setup-0.1.3.exe`：标准安装器，支持选择安装目录，并创建桌面和开始菜单快捷方式。
+- `EnvGuard-0.1.3.exe`：便携版，无需安装，直接运行即可。
 
 当前安装包未配置代码签名证书，Windows 首次运行时可能显示 SmartScreen 或未知发布者提示；请确认文件来自上述 GitHub Release 后再继续。当前 Release 已包含 NSIS 安装器、便携版、blockmap 和 `latest.yml` 资产。
 
