@@ -264,6 +264,7 @@ export class EnvironmentInstaller {
         cwd,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
+        detached: process.platform !== 'win32',
       });
       if (operationId) this.activeProcesses.set(operationId, child);
       let stderr = '';
@@ -311,6 +312,12 @@ export class EnvironmentInstaller {
           stdio: 'ignore',
           windowsHide: true,
         });
+      } else if (child.pid) {
+        try {
+          process.kill(-child.pid, 'SIGTERM');
+        } catch {
+          child.kill('SIGTERM');
+        }
       } else {
         child.kill('SIGTERM');
       }

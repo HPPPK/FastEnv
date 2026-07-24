@@ -15,7 +15,7 @@ const base = {
   version: 1,
   operation: 'write-system-path',
   requestId: 'elevated-test-1',
-  platform: 'linux',
+  platform: process.platform === 'linux' ? 'darwin' : 'linux',
   pathEntries: ['/opt/test/bin'],
   backupPath,
 };

@@ -24,6 +24,8 @@ Windows 的系统级 PATH 一次性提权助手已经完成真实 UAC 与 UI 端
 
 CI 不会修改真实的 Windows 注册表、macOS 的 /etc/paths.d 或 Linux 的 /etc/profile.d。它验证的是协议边界、编译产物和可取消的子进程行为。
 
+Unix runner 的取消回归会以独立进程组启动模拟安装，并发送进程组终止信号，避免只结束 shell 而遗留 sleep 子进程。
+
 ## 真实平台验收矩阵
 
 | 平台    | UAC/授权取消  | 成功写入      | 写入后校验    | 失败回滚       | 当前结论           |
