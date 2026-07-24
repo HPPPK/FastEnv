@@ -9,13 +9,22 @@ const binDir = path.join(root, 'node_modules', '.bin');
 fs.mkdirSync(binDir, { recursive: true });
 const fakeRunner = path.join(root, 'node_modules', 'npm', 'bin', 'npm-cli.js');
 fs.mkdirSync(path.dirname(fakeRunner), { recursive: true });
-fs.writeFileSync(fakeRunner, 'setTimeout(() => process.exit(0), 30000);\n', 'utf8');
+const fakeRunnerSource = [
+  'const args = process.argv.slice(2);',
+  "if (args.includes('list')) {",
+  "  process.stdout.write(JSON.stringify({ dependencies: {} }));",
+  '} else {',
+  '  setTimeout(() => process.exit(0), 30000);',
+  '}',
+  '',
+].join('\n');
+fs.writeFileSync(fakeRunner, fakeRunnerSource, 'utf8');
 
 if (process.platform === 'win32') {
   fs.writeFileSync(path.join(binDir, 'npm.cmd'), '@echo off\r\n', 'utf8');
 } else {
   const npmPath = path.join(binDir, 'npm');
-  fs.writeFileSync(npmPath, '#!/bin/sh\nsleep 30\n', 'utf8');
+  fs.writeFileSync(npmPath, '#!/usr/bin/env node\n' + fakeRunnerSource, 'utf8');
   fs.chmodSync(npmPath, 0o755);
 }
 
