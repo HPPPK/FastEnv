@@ -315,6 +315,15 @@ export class EnvironmentInstaller {
       } else if (child.pid) {
         try {
           process.kill(-child.pid, 'SIGTERM');
+          const processGroupId = -child.pid;
+          const forceKillTimer = setTimeout(() => {
+            try {
+              process.kill(processGroupId, 'SIGKILL');
+            } catch {
+              // The process group may already have exited.
+            }
+          }, 250);
+          forceKillTimer.unref();
         } catch {
           child.kill('SIGTERM');
         }
