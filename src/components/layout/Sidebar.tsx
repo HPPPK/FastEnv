@@ -94,7 +94,7 @@ export default function Sidebar(): JSX.Element {
         {/* 底部信息 */}
         <div className="border-t border-border px-4 py-4">
           <p className="text-xs text-muted-foreground">
-            EnvGuard v0.1.0
+            EnvGuard v0.1.4
           </p>
         </div>
       </aside>

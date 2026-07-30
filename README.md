@@ -1,6 +1,6 @@
 # EnvGuard - 企业级开发环境管理平台
 
-![Version](https://img.shields.io/badge/version-0.1.3-blue)
+![Version](https://img.shields.io/badge/version-0.1.4-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
@@ -42,7 +42,7 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - **打包工具**: electron-builder
 - **包管理**: npm/pnpm
 
-## 📌 当前开发状态（2026-07-22）
+## 📌 当前开发状态（2026-07-30）
 
 当前版本是一个已经完成基础业务闭环、但仍在向企业级 MVP 演进的 Electron 应用。重点不是继续堆叠页面，而是把已有 UI、IPC 和主进程服务稳定地连接起来。
 
@@ -89,20 +89,20 @@ EnvGuard 是一款企业级开发环境管理平台，致力于解决开发者�
 - “复用旧环境”目前只生成分析建议，不会自动修改或升级旧环境。
 - 冲突修复的 UI 预览、二次确认、用户级 PATH 写入、只读权限预检、一次性系统级 PATH 助手和跨平台回滚基础已完成；仍需在真实 macOS/Linux 机器或 CI 上验证授权取消、polkit/AppleScript 行为，并继续扩展其他变量类型。
 - 日志查询、清理和导出以及配置导入导出已完成 IPC/UI 基础闭环。
-- 跨平台 CI 验证工作流已补充，但尚未以本次本地执行结果替代 GitHub Actions 的真实 run；macOS/Linux 授权取消、polkit/AppleScript 和系统写入仍需隔离实机验收。
-- Windows x64 Electron 安装器与便携版已发布到 v0.1.3 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
+- 跨平台 CI 验证工作流已通过 GitHub Actions run 30092927038 的 Windows、macOS、Linux 矩阵；CI 仍不代表 macOS/Linux 真实授权取消、polkit/AppleScript 和系统写入已完成，相关内容仍需隔离实机验收。
+- Windows x64 Electron 安装器与便携版已发布到 v0.1.4 Release；macOS/Linux 打包和跨平台发布验收仍未完成。
 - Windows 系统级 PATH 已在当前机器完成一次真实 UAC 验证；macOS/Linux 仍仅完成代码路径和隔离协议验证，未声称有对应实机写入证据。
 - 依赖安装取消、失败分类、部分成功和安装前后清单已有隔离回归；真实网络/权限/磁盘空间失败和安全回滚仍需 Windows 验收。
 - 原生文本文件选择已接入；PDF/DOCX 和真实 OCR 仍未完成，日志与配置 IPC 已接入。
 
 ### 推荐开发顺序
 
-1. 整理当前 diff，commit/push，让 GitHub Actions 跑通并准备新的 Windows Release。
-2. 在 Windows 隔离环境补齐真实网络失败、权限失败、磁盘空间失败、部分成功和安全回滚验收。
-3. 在原生文本文件选择基础上接入 PDF/DOCX 文本提取和可替换 OCR provider。
-4. 为系统冲突修复扩展其他变量类型、持久化配置回放和回滚验证。
-5. 补充单元、IPC、renderer、Electron E2E、并发和压力测试。
-6. macOS/Linux 相关工作暂缓。
+1. 在 Windows 隔离环境补齐真实网络失败、权限失败、磁盘空间失败、多包中途失败和安全回滚验收。
+2. 在原生文本文件选择基础上接入 PDF/DOCX 文本提取和可替换 OCR provider。
+3. 为系统冲突修复扩展其他变量类型、持久化配置回放和回滚验证。
+4. 补充单元、IPC、renderer、Electron E2E、并发和压力测试。
+5. 完善 Windows 自动更新、启动集成、右键菜单、签名和安装器 UX。
+6. macOS/Linux 真实系统写入与打包暂缓。
 
 `AGENTS.md` 是开发交接说明；若其中的状态描述与实际源码不一致，以实际源码和本节的验证结果为准。
 

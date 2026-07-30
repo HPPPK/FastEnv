@@ -1,6 +1,6 @@
 # FastEnv 下一阶段优先级
 
-更新时间：2026-07-24
+更新时间：2026-07-30
 
 ## 已完成
 
@@ -9,13 +9,13 @@
 - 配置导入导出、日志查询/清理/导出基础 IPC/UI 闭环
 - 安装前后依赖清单、失败分类、部分成功状态和回归脚本
 - 原生需求文本文件选择和 10 MB 文本读取校验
-- Windows x64 NSIS/Portable v0.1.3 发布（未签名）
+- Windows x64 NSIS/Portable v0.1.4 发布（未签名）
 
 ## 当前行动顺序（暂不处理 macOS）
 
 ### P0：先完成交付链路
 
-已完成当前 Windows 交付链路：修复 CI、commit/push，并发布 v0.1.3；GitHub Actions 的 Windows、macOS、Linux 矩阵验证全部通过。
+已完成当前 Windows 交付链路：修复 CI、提交并推送 v0.1.4，发布 Windows 安装资产；GitHub Actions run 30092927038 的 Windows、macOS、Linux 矩阵验证全部通过。
 
 ### P1：依赖安装真实异常验收
 

@@ -1,8 +1,10 @@
 # 跨平台验证说明
 
-## 当前状态（2026-07-23）
+## 当前状态（2026-07-30）
 
 Windows 的系统级 PATH 一次性提权助手已经完成真实 UAC 与 UI 端到端验证。macOS/Linux 目前已完成代码路径和协议隔离测试，但尚未声称完成真实系统级写入验收。
+
+最近一次 GitHub Actions run 30092927038 已通过 Windows、macOS、Linux 三个平台矩阵。该结果证明隔离构建与回归边界稳定，但不等同于 macOS/Linux 真实系统级写入完成。
 
 工作流会先通过 pnpm/action-setup 安装仓库声明的 pnpm 版本，再启用 Node.js 的 pnpm 缓存；这样三种 runner 在缓存初始化阶段就能找到 pnpm。
 

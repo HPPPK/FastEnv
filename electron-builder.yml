@@ -1,6 +1,6 @@
 appId: com.envguard.app
 productName: EnvGuard
-version: 0.1.0
+version: 0.1.4
 directories:
   buildResources: assets
   output: release

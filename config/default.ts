@@ -30,7 +30,7 @@ export const defaultUserConfig: UserConfig = {
  * 默认全局系统配置
  */
 export const defaultGlobalConfig: GlobalSystemConfig = {
-  version: '0.1.3',
+  version: '0.1.4',
   lastUpdated: Date.now(),
   environments: [],
   repairRecords: [],

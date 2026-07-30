@@ -49,8 +49,6 @@ VITE v5.4.21 ready at http://localhost:5173/
 
 Expected warnings that can be ignored for now:
 
-- Vite CJS Node API deprecation warning.
-- Tailwind config warning from loading `tailwind.config.ts` while package type is CommonJS.
 - Electron DevTools `Autofill.enable` protocol warning.
 
 ## Major Fixes Already Applied
@@ -247,6 +245,13 @@ Next best engineering steps:
 - Added docs/config-log-ipc.md; keep README, AGENTS.md, and docs/next-priority.md synchronized when this behavior changes.
 - The next evidence gap remains real macOS/Linux authorization, write verification, rollback, and restart validation. CI is intentionally isolated and is not evidence of real system-level mutation.
 
+
+## Follow-up Improvements (2026-07-30)
+
+- 已将应用、electron-builder、Sidebar 和设置页版本统一到 v0.1.4。
+- 已同步 README、下一阶段优先级和跨平台验证文档；GitHub Actions run 30092927038 的 Windows、macOS、Linux 矩阵均已通过。
+- 已发布 Windows x64 v0.1.4 NSIS/Portable 安装资产；资产未签名，可能触发 SmartScreen。
+- macOS/Linux 真实系统授权、写入、校验、回滚和打包仍未完成。
 
 ## Follow-up Improvements (2026-07-24)
 
